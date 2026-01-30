@@ -1,7 +1,7 @@
 {
     "server": 
     {
-      "mongoUrl": "mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/",
+      "mongoUrl": "REPLACE_WITH_YOUR_MONGODB_CONNECTION_STRING",
       "port": 3333,
       "logRequests": false,
       "logQueries": false,
