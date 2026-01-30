@@ -85,6 +85,7 @@
 | [pokemon-card-manager](personal/pokemon-card-manager/) | ポケモンカード管理（AI判定→Notion登録） | GAS, Photos API, Notion, Perplexity |
 | [crypto-tracker](personal/crypto-tracker/) | 暗号資産期待値レポート | JS, CoinGecko, Perplexity, Grok |
 | [stock-screener](personal/stock-screener/) | 株式銘柄チェック・レポート | GAS, Gmail |
+| [crypto-portfolio-manager](personal/crypto-portfolio-manager/) | 暗号資産ポートフォリオ管理（ブレイクアウト検知・リバランス） | GAS, CoinGecko API |
 
 ### ブラウザ拡張 (`browser-extensions/`)
 
