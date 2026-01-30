@@ -7,7 +7,7 @@
 // ==================== 設定値 ====================
 const CONFIG = {
   // 通知先メールアドレス（必須）
-  EMAIL_RECIPIENTS: 'kunehito.nakahara@souco.space,saori.goto@souco.space,hodaka.goto@souco.space',
+  EMAIL_RECIPIENTS: 'user1@example.com,user2@example.com,admin@example.com',
   
   // スプレッドシートのシート名（正確に入力）
   SHEETS: {

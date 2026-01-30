@@ -1,10 +1,10 @@
 # メルマガ作成用プロフィール情報（AI用）
 
 ## 基本情報
-- 氏名: 後藤穂高（ごとう ほだか）
+- 氏名: （氏名）
 - 年齢: 36歳（1988年6月11日生）
 - 拠点: 神奈川県川崎市
-- 連絡先: hodaka.gt@gmail.com
+- 連絡先: admin@example.com
 - 現職: Good Light Inc. 代表取締役、合同会社Intelligent Beast 代表
 
 ## 学歴・資格

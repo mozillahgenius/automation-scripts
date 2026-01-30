@@ -7,7 +7,7 @@
 const AUTHOR_PROFILE = {
   // 基本情報
   basic: {
-    name: '後藤穂高',
+    name: 'AUTHOR_NAME',
     nameReading: 'ごとう ほだか',
     age: 36,
     birthDate: '1988年6月11日',
@@ -449,7 +449,7 @@ function callSlideSpeakAPI(content, timeSlot = 'unknown') {
 ${content}
 
 ---
-作成者: 後藤穂高
+作成者: AUTHOR_NAME
 作成日時: ${new Date().toLocaleDateString('ja-JP')}
 時間帯: ${timeSlot}
     `.trim();
@@ -1206,7 +1206,7 @@ SlideSpeak API情報:
 ※プレゼンテーション閲覧URLはSlideSpeakによって発行される閲覧専用URLです
 
 作成者情報:
-- 作成者: 後藤穂高
+- 作成者: AUTHOR_NAME
 - 専門: 上場準備・法務・経営企画・DX推進
 - 会社: Good Light Inc. / 合同会社Intelligent Beast
 
@@ -1578,7 +1578,7 @@ ${profileContext}
 - 各スライドに十分な詳細情報を含める
 - 実務に直結する具体的な内容
 - 数値データや事例を積極的に活用
-- 後藤穂高の専門性（法務・経営企画・上場準備等）を活かした視点
+- 作成者の専門性（法務・経営企画・上場準備等）を活かした視点
 
 ## Perplexityから収集した情報：
 ${JSON.stringify(perplexityData, null, 2)}
@@ -2819,7 +2819,7 @@ function createPresentationWithGoogleSlides(content, timeSlot = 'test') {
     // サブタイトルを設定
     if (shapes.length > 1) {
       const subtitleShape = shapes[1];
-      subtitleShape.getText().setText(`作成者: 後藤穂高\n作成日時: ${new Date().toLocaleDateString('ja-JP')}`);
+      subtitleShape.getText().setText(`作成者: AUTHOR_NAME\n作成日時: ${new Date().toLocaleDateString('ja-JP')}`);
     }
     
     slides.push({
@@ -2930,7 +2930,7 @@ Google Slides情報:
 - 作成日時: ${timestamp}
 
 作成者情報:
-- 作成者: 後藤穂高
+- 作成者: AUTHOR_NAME
 - 専門: 上場準備・法務・経営企画・DX推進
 - 会社: Good Light Inc. / 合同会社Intelligent Beast
 

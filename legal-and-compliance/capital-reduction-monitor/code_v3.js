@@ -72,7 +72,7 @@ const CONFIG = {
   CALENDAR_LINK: "https://calendar.app.google/JKPmN9kUPModECmy6",
 
   // リンク集
-  PROFILE_LINK: "https://linktr.ee/hodakagoto_martin"
+  PROFILE_LINK: "https://example.com/profile"
 };
 
 /**
@@ -114,7 +114,7 @@ ${CONFIG.CALENDAR_LINK}
 何卒よろしくお願いいたします。
 
 合同会社IntelligentBeast
-代表　後藤 穂高
+代表　（氏名）
 your-email@example.com
 080-2066-1791`;
 

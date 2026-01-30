@@ -24,7 +24,7 @@ function sendEmailIndividually(toField, subject, htmlBody) {
 const AUTHOR_PROFILE = {
   // 基本情報
   basic: {
-    name: '後藤穂高',
+    name: 'SENDER_NAME',
     nameReading: 'ごとう ほだか',
     age: 36,
     birthDate: '1988年6月11日',

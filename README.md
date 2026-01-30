@@ -1,6 +1,6 @@
 # automation-scripts
 
-業務自動化スクリプト集 — Google Apps Script / JavaScript / TypeScript を中心とした50以上の自動化プロジェクト
+業務自動化スクリプト集 — Google Apps Script / JavaScript / TypeScript / Python を中心とした55以上の自動化プロジェクト
 
 > **Note:** gas-shared-drive リポジトリから統合されたプロジェクトを含みます。
 
@@ -102,6 +102,13 @@
 | プロジェクト | 概要 | 技術 |
 |-------------|------|------|
 | [clipboard-history](browser-extensions/clipboard-history/) | クリップボード履歴マネージャー | Chrome Extension (Manifest V3) |
+| [browsing-history-tracker](browser-extensions/browsing-history-tracker/) | ブラウジング履歴収集・CSV出力 | Chrome Extension (Manifest V3) |
+
+### SNS自動化 (`social-media-automation/`)
+
+| プロジェクト | 概要 | 技術 |
+|-------------|------|------|
+| [instagram-twitter-bot](social-media-automation/instagram-twitter-bot/) | Instagram/Twitterの自動操作（いいね・投稿） | Python, Selenium |
 
 ## Tech Stack
 
@@ -118,7 +125,8 @@
 | **Salesforce REST API** | CRM連携 |
 | **HubSpot API** | 案件管理連携 |
 | **Node.js / TypeScript** | newsletter-system |
-| **Chrome Extensions** | clipboard-history |
+| **Chrome Extensions** | clipboard-history, browsing-history-tracker |
+| **Python / Selenium** | instagram-twitter-bot |
 
 ## GAS共通セットアップ手順
 

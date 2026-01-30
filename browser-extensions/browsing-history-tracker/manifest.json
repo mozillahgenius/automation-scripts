@@ -1,0 +1,27 @@
+{
+   "manifest_version": 3,
+   "name": "My Extension",
+   "version": "1.0.0",
+   "description": "Stores browsing history data for different users.",
+   "icons": {
+      "16": "icon32.png",
+      "32": "icon32.png",
+      "48": "icon32.png",
+      "128": "icon32.png"
+   },
+   "action": {
+      "default_icon": {
+         "16": "icon32.png",
+         "32": "icon32.png",
+         "48": "icon32.png",
+         "128": "icon32.png"
+      },
+      "default_popup": "popup.html"
+   },
+   "permissions": [ 
+   "storage",
+      "history",
+      "identity",
+      "identity.email"
+   ]
+}
