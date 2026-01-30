@@ -1,7 +1,7 @@
 /**
  * ===== 設定エリア（ここを編集してください） =====
  */
-const EXCEL_URL = 'https://docs.google.com/spreadsheets/d/1wyr5nJJc-4HFcXPpf3T5PL-fbQehSlVO/edit';  // GoogleスプレッドシートのURL
+const EXCEL_URL = 'https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_PLACEHOLDER/edit';  // GoogleスプレッドシートのURL
 
 // 複数ファイルの場合は配列で指定
 // const EXCEL_URLS = [

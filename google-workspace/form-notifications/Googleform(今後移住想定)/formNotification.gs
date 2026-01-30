@@ -257,7 +257,7 @@ ${customerName ? customerName[0] : "お客"} 様
 しばらくお待ちくださいますようお願い申し上げます。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
-Intelligent Beast
+COMPANY_X
 your-email@example.com
 ━━━━━━━━━━━━━━━━━━━━━━━━
 `;

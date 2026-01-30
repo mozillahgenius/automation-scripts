@@ -1,6 +1,6 @@
 /**
  * HubSpot Deal 請求先情報チェッカー
- * 成約後の案件で請求先企業名、商品名、souco案件ID、soucoIDが抜けているものを通知
+ * 成約後の案件で請求先企業名、商品名、COMPANY_B案件ID、COMPANY_BIDが抜けているものを通知
  */
 
 // ==================== 設定値 ====================
@@ -24,7 +24,7 @@ const CONFIG = {
     DEAL_OWNER: 5,          // F列: [Deals] Deal owner
     BILLING_COMPANY: 6,     // G列: [Deals] 利用者側_請求先_企業名
     PRODUCT_NAME: 7,        // H列: [Deals] 契約書に記載する商品名
-    SOUCO_CASE_ID: 8,       // I列: [Deals] souco案件ID
+    WAREHOUSE_CASE_ID: 8,       // I列: [Deals] COMPANY_B案件ID
     WAREHOUSE_ID: 9         // J列: [Deals] 契約した倉庫ID
   }
 };
@@ -155,14 +155,14 @@ function getIncompleteBillingDeals(spreadsheet, postContractStatuses) {
     if (postContractStatuses.includes(dealStage)) {
       const billingCompany = dealsData[i][CONFIG.COLUMNS.BILLING_COMPANY];
       const productName = dealsData[i][CONFIG.COLUMNS.PRODUCT_NAME];
-      const soucoCaseId = dealsData[i][CONFIG.COLUMNS.SOUCO_CASE_ID];
+      const COMPANY_BCaseId = dealsData[i][CONFIG.COLUMNS.WAREHOUSE_CASE_ID];
       const warehouseId = dealsData[i][CONFIG.COLUMNS.WAREHOUSE_ID];
       
       // いずれかの情報が欠けている場合
       const missingFields = [];
       if (!billingCompany || billingCompany === '') missingFields.push('利用者側_請求先_企業名');
       if (!productName || productName === '') missingFields.push('契約書に記載する商品名');
-      if (!soucoCaseId || soucoCaseId === '') missingFields.push('souco案件ID');
+      if (!COMPANY_BCaseId || COMPANY_BCaseId === '') missingFields.push('COMPANY_B案件ID');
       if (!warehouseId || warehouseId === '') missingFields.push('契約した倉庫ID');
       
       if (missingFields.length > 0) {
@@ -174,7 +174,7 @@ function getIncompleteBillingDeals(spreadsheet, postContractStatuses) {
           closeDate: formatDate(dealsData[i][CONFIG.COLUMNS.CLOSE_DATE]),
           billingCompany: billingCompany || '-',
           productName: productName || '-',
-          soucoCaseId: soucoCaseId || '-',
+          COMPANY_BCaseId: COMPANY_BCaseId || '-',
           warehouseId: warehouseId || '-',
           missingFields: missingFields,
           rowNumber: i + 1  // スプレッドシート上の行番号
@@ -220,7 +220,7 @@ function createReportSpreadsheet(incompleteDeals) {
     '金額',
     '利用者側_請求先_企業名',
     '契約書に記載する商品名',
-    'souco案件ID',
+    'COMPANY_B案件ID',
     '契約した倉庫ID',
     '不足項目',
     '不足項目数'
@@ -245,7 +245,7 @@ function createReportSpreadsheet(incompleteDeals) {
     deal.amount || 0,
     deal.billingCompany === '-' ? '' : deal.billingCompany,
     deal.productName === '-' ? '' : deal.productName,
-    deal.soucoCaseId === '-' ? '' : deal.soucoCaseId,
+    deal.COMPANY_BCaseId === '-' ? '' : deal.COMPANY_BCaseId,
     deal.warehouseId === '-' ? '' : deal.warehouseId,
     deal.missingFields.join(', '),
     deal.missingFields.length
@@ -277,7 +277,7 @@ function createReportSpreadsheet(incompleteDeals) {
       if (incompleteDeals[i].productName === '-') {
         sheet.getRange(row, 8).setBackground('#ffcdd2');
       }
-      if (incompleteDeals[i].soucoCaseId === '-') {
+      if (incompleteDeals[i].COMPANY_BCaseId === '-') {
         sheet.getRange(row, 9).setBackground('#ffcdd2');
       }
       if (incompleteDeals[i].warehouseId === '-') {
@@ -309,7 +309,7 @@ function createReportSpreadsheet(incompleteDeals) {
     ['【不足項目別集計】', ''],
     ['利用者側_請求先_企業名', missingSummary['利用者側_請求先_企業名']],
     ['契約書に記載する商品名', missingSummary['契約書に記載する商品名']],
-    ['souco案件ID', missingSummary['souco案件ID']],
+    ['COMPANY_B案件ID', missingSummary['COMPANY_B案件ID']],
     ['契約した倉庫ID', missingSummary['契約した倉庫ID']]
   ];
   
@@ -356,7 +356,7 @@ function createMissingSummary(incompleteDeals) {
   const summary = {
     '利用者側_請求先_企業名': 0,
     '契約書に記載する商品名': 0,
-    'souco案件ID': 0,
+    'COMPANY_B案件ID': 0,
     '契約した倉庫ID': 0,
     totalAmount: 0
   };
@@ -442,8 +442,8 @@ function createBillingHtmlEmailBody(incompleteDeals, missingSummary, reportUrl) 
         <span class="field-count">${missingSummary['契約書に記載する商品名']}件</span>
       </div>
       <div class="field-row">
-        <span class="field-name">souco案件ID</span>
-        <span class="field-count">${missingSummary['souco案件ID']}件</span>
+        <span class="field-name">COMPANY_B案件ID</span>
+        <span class="field-count">${missingSummary['COMPANY_B案件ID']}件</span>
       </div>
       <div class="field-row">
         <span class="field-name">契約した倉庫ID</span>
@@ -493,7 +493,7 @@ function createBillingPlainTextEmailBody(incompleteDeals, missingSummary, report
 【不足項目別集計】
 ・利用者側_請求先_企業名: ${missingSummary['利用者側_請求先_企業名']}件
 ・契約書に記載する商品名: ${missingSummary['契約書に記載する商品名']}件
-・souco案件ID: ${missingSummary['souco案件ID']}件
+・COMPANY_B案件ID: ${missingSummary['COMPANY_B案件ID']}件
 ・契約した倉庫ID: ${missingSummary['契約した倉庫ID']}件
 
 対象金額合計: ¥${missingSummary.totalAmount.toLocaleString()}
@@ -557,7 +557,7 @@ function debugBillingDataCheck() {
         const missingFields = [];
         if (!data[i][6]) missingFields.push('利用者側_請求先_企業名');
         if (!data[i][7]) missingFields.push('契約書に記載する商品名');
-        if (!data[i][8]) missingFields.push('souco案件ID');
+        if (!data[i][8]) missingFields.push('COMPANY_B案件ID');
         if (!data[i][9]) missingFields.push('契約した倉庫ID');
         
         if (missingFields.length > 0) {
@@ -644,9 +644,9 @@ function testBillingInfoEmail() {
       closeDate: '2024/03/31',
       billingCompany: 'テスト株式会社',
       productName: '-',
-      soucoCaseId: '-',
+      COMPANY_BCaseId: '-',
       warehouseId: 'WH12345',
-      missingFields: ['契約書に記載する商品名', 'souco案件ID'],
+      missingFields: ['契約書に記載する商品名', 'COMPANY_B案件ID'],
       rowNumber: 10
     },
     {
@@ -657,9 +657,9 @@ function testBillingInfoEmail() {
       closeDate: '2024/03/15',
       billingCompany: '-',
       productName: '-',
-      soucoCaseId: '-',
+      COMPANY_BCaseId: '-',
       warehouseId: '-',
-      missingFields: ['利用者側_請求先_企業名', '契約書に記載する商品名', 'souco案件ID', '契約した倉庫ID'],
+      missingFields: ['利用者側_請求先_企業名', '契約書に記載する商品名', 'COMPANY_B案件ID', '契約した倉庫ID'],
       rowNumber: 15
     }
   ];

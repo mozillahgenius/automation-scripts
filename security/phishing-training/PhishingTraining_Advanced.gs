@@ -5269,8 +5269,8 @@ function testCompanyUrlFetch() {
     // 企業URL取得（古いURLをクリア）
     let companyUrls = getConfigValue('COMPANY_URLS');
 
-    // soucoのURLが含まれている場合はクリア
-    if (companyUrls && (companyUrls.includes('souco') || companyUrls.includes('example.com'))) {
+    // WAREHOUSE_SYSのURLが含まれている場合はクリア
+    if (companyUrls && (companyUrls.includes('WAREHOUSE_SYS') || companyUrls.includes('example.com'))) {
       companyUrls = '';
       // ConfigシートのURLをクリア
       const ss = SpreadsheetApp.getActiveSpreadsheet();

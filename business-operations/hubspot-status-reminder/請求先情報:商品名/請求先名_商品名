@@ -7,7 +7,7 @@
 // ※必ず変更してください
 const CONFIG = {
   // 通知先メールアドレス（必須）
-  EMAIL_RECIPIENTS: 'hodaka.goto@souco.space',
+  EMAIL_RECIPIENTS: 'user@example.com',
   
   // スプレッドシートのシート名（正確に入力）
   SHEETS: {
@@ -612,7 +612,7 @@ function testEmailNotification() {
     {
       dealName: 'テスト案件1',
       amount: 1000000,
-      dealStage: 'リード (souco-tenant)',
+      dealStage: 'リード (COMPANY_B-tenant)',
       createDate: '2024/01/01',
       closeDate: '2024/03/31',
       dealOwner: 'テスト太郎',

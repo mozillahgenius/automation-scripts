@@ -16,7 +16,7 @@ const CONFIG = {
   GROK_API_KEY: PropertiesService.getScriptProperties().getProperty('GROK_API_KEY'),
   GROK_API_URL: 'https://api.x.ai/v1/chat/completions',
   
-  EMAIL_RECIPIENTS: 'your-email@example.com,x-aaaaralqukdufxwnma322ni5am@kushimtalk.slack.com', // レポート送信先メールアドレス
+  EMAIL_RECIPIENTS: 'your-email@example.com,channel@workspace.slack.com', // レポート送信先メールアドレス
   SHEET_NAMES: {
     SEARCH: 'シート1_検索設定',
     VIOLATION_CHECK: 'シート2_規約チェック'
@@ -742,7 +742,7 @@ function extractPostsByKeywords(htmlContent, config) {
     Logger.log(`キーワードベース抽出開始: テキストサイズ ${plainText.length}文字`);
     
     // キーワードを準備（デフォルトキーワード含む）
-    const keywords = config.keywords || ['田原', '田中', '中国', '中傷', '誹謗', '風説の流布'];
+    const keywords = config.keywords || ['KEYWORD_1', 'KEYWORD_2', 'KEYWORD_3', '中傷', '誹謗', '風説の流布'];
     Logger.log(`検索キーワード: ${keywords.join(', ')}`);
     
     let postIndex = 0;
@@ -1413,7 +1413,7 @@ function parseWithImprovedTextAnalysis(htmlContent, userName, config) {
       Logger.log('テキストサンプル (1000文字): ' + textSample);
       
       // キーワードの出現回数をチェック（詳細版）
-      const keywordsToCheck = config.keywords || ['田原', '田中', '中国', '中傷', '誹謗', '風説の流布'];
+      const keywordsToCheck = config.keywords || ['KEYWORD_1', 'KEYWORD_2', 'KEYWORD_3', '中傷', '誹謗', '風説の流布'];
       keywordsToCheck.forEach(keyword => {
         const regex = new RegExp(keyword, 'gi');
         const matches = textContent.match(regex);
@@ -1909,7 +1909,7 @@ function createViolationCheckSheet() {
   
   // サンプルデータ（簡素化）
   const sampleData = [
-    ['ac2dd39cd8f27a022d3cea52c2b72c2e8f1b48e0e5c3a916e57dc7e958f480b7', '田原,田中,中国,中傷,誹謗,風説の流布', 'https://support.yahoo-net.jp/PccFinance/s/article/H000011273', true],
+    ['ACCOUNT_HASH_PLACEHOLDER', 'KEYWORD_1,KEYWORD_2,KEYWORD_3,中傷,誹謗,風説の流布', 'https://support.yahoo-net.jp/PccFinance/s/article/H000011273', true],
     ['another_user_id', '不適切な発言,ハラスメント,偽情報', 'https://example.com/terms', false]
   ];
   sheet.getRange(2, 1, sampleData.length, headers.length).setValues(sampleData);
@@ -2497,11 +2497,11 @@ function testWebScraping() {
     
     // テスト用の設定（キーワード更新）
     const testConfig = {
-      accountName: 'ac2dd39cd8f27a022d3cea52c2b72c2e8f1b48e0e5c3a916e57dc7e958f480b7',
-      companyName: 'クシム　2345',
+      accountName: 'ACCOUNT_HASH_PLACEHOLDER',
+      companyName: 'COMPANY_NAME_PLACEHOLDER',
       platform: 'Yahoo!ファイナンス掲示板',
-      platformURL: 'https://finance.yahoo.co.jp/cm/personal/history/comment?user=ac2dd39cd8f27a022d3cea52c2b72c2e8f1b48e0e5c3a916e57dc7e958f480b7&sort=2',
-      keywords: ['田原', '田中', '中国'],
+      platformURL: 'https://finance.yahoo.co.jp/cm/personal/history/comment?user=ACCOUNT_HASH_PLACEHOLDER&sort=2',
+      keywords: ['KEYWORD_1', 'KEYWORD_2', 'KEYWORD_3'],
       tosURL: 'https://support.yahoo-net.jp/PccFinance/s/article/H000011273',
       isActive: true
     };
@@ -2537,7 +2537,7 @@ function testPageFetch() {
   const ui = SpreadsheetApp.getUi();
   
   try {
-    const testUrl = 'https://finance.yahoo.co.jp/cm/personal/history/comment?user=ac2dd39cd8f27a022d3cea52c2b72c2e8f1b48e0e5c3a916e57dc7e958f480b7&sort=2';
+    const testUrl = 'https://finance.yahoo.co.jp/cm/personal/history/comment?user=ACCOUNT_HASH_PLACEHOLDER&sort=2';
     
     Logger.log('ページ取得テスト開始: ' + testUrl);
     
@@ -2574,7 +2574,7 @@ function testGrokAPI() {
     const testPosts = `### テスト投稿 1
 - **投稿番号**: 123
 - **企業/銘柄**: テスト企業
-- **内容**: 田原さんのポストは事実ではないです。`;
+- **内容**: KEYWORD_1さんのポストは事実ではないです。`;
     
     const testToS = `## 禁止事項
 1. 他人を中傷、名誉毀損する行為
@@ -2582,7 +2582,7 @@ function testGrokAPI() {
     
     const testConfig = {
       companyName: 'テスト企業',
-      keywords: ['田原', '中国']
+      keywords: ['KEYWORD_1', 'KEYWORD_2']
     };
     
     // Grok-4でテスト分析を実行
@@ -2675,7 +2675,7 @@ function debugHTMLStructureTest() {
   try {
     Logger.log('=== HTML構造デバッグテスト開始 ===');
     
-    const testUrl = 'https://finance.yahoo.co.jp/cm/personal/history/comment?user=ac2dd39cd8f27a022d3cea52c2b72c2e8f1b48e0e5c3a916e57dc7e958f480b7&sort=2';
+    const testUrl = 'https://finance.yahoo.co.jp/cm/personal/history/comment?user=ACCOUNT_HASH_PLACEHOLDER&sort=2';
     const content = fetchPageContent(testUrl);
     
     if (!content) {

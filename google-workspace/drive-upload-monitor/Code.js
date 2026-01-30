@@ -4,7 +4,7 @@ const CONFIG = {
   SLACK_WEBHOOK_URL: PropertiesService.getScriptProperties().getProperty('SLACK_WEBHOOK_URL'),
   
   // スプレッドシートのID
-  SPREADSHEET_ID: '1civv-zYpplWxg2Uu3esQaSuWO0wTGC2fRFPTqI1QY5Q',
+  SPREADSHEET_ID: 'SPREADSHEET_ID_PLACEHOLDER',
     
   // シート名の定義
   SHEETS: {

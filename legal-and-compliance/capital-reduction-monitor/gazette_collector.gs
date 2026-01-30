@@ -12,7 +12,7 @@
 // 設定
 const CONFIG = {
   BASE_URL: 'https://www.kanpo.go.jp/',
-  FOLDER_ID: '1IVQTgWiMIftmc9ygO48WqWJsEGAoGEII', // Google DriveのフォルダIDを設定
+  FOLDER_ID: 'DRIVE_FOLDER_ID_PLACEHOLDER', // Google DriveのフォルダIDを設定
   SHEET_NAME: '取得ログ' // ログ用シート名
 };
 

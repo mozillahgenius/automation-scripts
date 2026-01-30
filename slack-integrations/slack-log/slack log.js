@@ -466,7 +466,7 @@ function showAbout() {
     '• HTMLメールレポート\\n' +
     '• スレッド統合処理\\n' +
     '• Googleドキュメントへのマニュアル記録\\n' +
-    '\\n© 2024 Intelligent Beast',
+    '\\n© 2024 COMPANY_X',
     ui.ButtonSet.OK
   );
 }

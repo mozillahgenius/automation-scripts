@@ -19,9 +19,9 @@ def login():
 		time.sleep(1)
 
 		#メアドと、パスワードを入力
-		driver.find_element_by_name('username').send_keys('nekoneko193') 
+		driver.find_element_by_name('username').send_keys('YOUR_USERNAME')
 		time.sleep(1)
-		driver.find_element_by_name('password').send_keys('abc456')
+		driver.find_element_by_name('password').send_keys('YOUR_PASSWORD')
 		time.sleep(5)
 
 		#ログインボタンを押す

@@ -4700,7 +4700,7 @@ function checkPhotosAPISetup() {
   // 1. 現在のプロジェクト情報を表示
   try {
     console.log('【GASプロジェクト情報】');
-    console.log('プロジェクトID: 138255947511');
+    console.log('プロジェクトID: GCP_PROJECT_ID_PLACEHOLDER');
     console.log('スクリプトID: ' + ScriptApp.getScriptId());
   } catch (e) {
     console.error('プロジェクト情報取得エラー:', e);
@@ -4717,7 +4717,7 @@ function checkPhotosAPISetup() {
   testPhotosAPIConnection();
 
   return {
-    projectId: '138255947511',
+    projectId: 'GCP_PROJECT_ID_PLACEHOLDER',
     scriptId: ScriptApp.getScriptId()
   };
 }
@@ -4778,9 +4778,9 @@ function testPhotosAPIConnection() {
 function showGCPSetupInstructions() {
   console.log('=== GCPプロジェクト設定手順 ===\n');
 
-  console.log('【方法A: 既存プロジェクト(138255947511)でAPIを有効化】');
+  console.log('【方法A: 既存プロジェクト(GCP_PROJECT_ID_PLACEHOLDER)でAPIを有効化】');
   console.log('1. 以下のURLにアクセス:');
-  console.log('   https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com?project=138255947511');
+  console.log('   https://console.cloud.google.com/apis/library/photoslibrary.googleapis.com?project=GCP_PROJECT_ID_PLACEHOLDER');
   console.log('2. 「有効にする」ボタンをクリック');
   console.log('3. 5-10分待機');
   console.log('4. testPhotosAPIConnection() を実行して確認\n');
@@ -4794,7 +4794,7 @@ function showGCPSetupInstructions() {
 
   console.log('【方法C: CLIツールを使用（上級者向け）】');
   console.log('gcloud CLIがインストール済みの場合:');
-  console.log('$ gcloud services enable photoslibrary.googleapis.com --project=138255947511');
+  console.log('$ gcloud services enable photoslibrary.googleapis.com --project=GCP_PROJECT_ID_PLACEHOLDER');
 }
 
 /**
@@ -4928,7 +4928,7 @@ function checkAndFixProjectSettings() {
   // 現在のGASプロジェクト情報
   console.log('【現在のGASプロジェクト情報】');
   console.log('スクリプトID: ' + ScriptApp.getScriptId());
-  console.log('エラーメッセージのプロジェクトID: 138255947511');
+  console.log('エラーメッセージのプロジェクトID: GCP_PROJECT_ID_PLACEHOLDER');
   console.log('※このプロジェクトではPhotos APIが有効化できていません\n');
 
   console.log('【解決方法を選択してください】\n');

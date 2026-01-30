@@ -16,7 +16,7 @@
 // ============================================
 const CONFIG = {
   // スプレッドシートID（出力先）
-  SPREADSHEET_ID: '10HszVff2S91-LwWLSYruCNizBqe5ZbL4vN_Si40pvNk', // ← ここにスプレッドシートIDを設定
+  SPREADSHEET_ID: 'SPREADSHEET_ID_PLACEHOLDER', // ← ここにスプレッドシートIDを設定
 
   // シート名
   SHEETS: {

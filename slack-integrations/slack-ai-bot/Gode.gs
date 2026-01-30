@@ -158,7 +158,7 @@ function doPost(e) {
       {
         role: 'system',
         content:
-          '今から説明するslackチャンネルとしてふさわしい回答を望む。付与する情報を前提として回答してください。FAQのスプレッドシートでの処理が可能な場合にはそのFAQの内容を踏まえて回答しつつ、スプレッドシートのリンク(https://docs.google.com/spreadsheets/d/1MKMjUp2F3r71-VCsT4wVfZo1G6IjEpxobQ7fJKtRPlA/edit?usp=sharing)を掲載して。もしもFAQのシートを参照する必要がなければ、FAQのシートには言及しないで。またFAQのスプレッドシートや参考情報のURLはなるべく自然な形で伝えるようにして。' +
+          '今から説明するslackチャンネルとしてふさわしい回答を望む。付与する情報を前提として回答してください。FAQのスプレッドシートでの処理が可能な場合にはそのFAQの内容を踏まえて回答しつつ、スプレッドシートのリンク(https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_PLACEHOLDER/edit?usp=sharing)を掲載して。もしもFAQのシートを参照する必要がなければ、FAQのシートには言及しないで。またFAQのスプレッドシートや参考情報のURLはなるべく自然な形で伝えるようにして。' +
           channelDescription,
       }
     );

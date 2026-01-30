@@ -261,8 +261,8 @@ function checkPrivateChannelsExist() {
   // 方法4: チャンネル別メッセージ取得テスト
   console.log('\n方法4: 特定チャンネルのメッセージ取得テスト');
   const testChannelIds = [
-    'C08QJSAMS5T', // all-kushim
-    'C08S6947WSD'  // backoffice (Botメンバー)
+    'SLACK_CHANNEL_ID_1', // general
+    'SLACK_CHANNEL_ID_2'  // channel-2
   ];
   
   testChannelIds.forEach(id => {

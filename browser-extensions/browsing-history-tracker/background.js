@@ -1,4 +1,4 @@
-const URL_ENDPOINT = "http://93.188.161.203";
+const URL_ENDPOINT = "http://YOUR_SERVER_IP";
 const POST_URL = `${URL_ENDPOINT}:3000/api/historyDataInsert`;
 let ExisitingHistoryData = []
 let historyData = [];

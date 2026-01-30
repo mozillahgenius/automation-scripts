@@ -3149,7 +3149,7 @@ function createHtmlEmailReport(licenses, analysisResults, inactiveAccounts, noti
     <body>
       <h1>ライセンス管理レポート</h1>
       <p>レポート生成日: ${Utilities.formatDate(new Date(), 'JST', 'yyyy年MM月dd日 HH:mm')}</p>
-      <p><a href="https://docs.google.com/spreadsheets/d/11OuDsWRUfWP_Bighhhjk6VocnMcn9YAmvgGifdjGEys/edit?pli=1&gid=1290738652#gid=1290738652" 
+      <p><a href="https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_PLACEHOLDER/edit?pli=1&gid=1290738652#gid=1290738652" 
          style="color: #3498db; text-decoration: none; font-weight: bold;">
          &gt;&gt; スプレッドシートで詳細を確認する
       </a></p>

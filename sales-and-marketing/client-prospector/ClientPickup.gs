@@ -22,7 +22,7 @@
 // ========================================
 const CONFIG = {
   // スプレッドシートID（★要設定★）
-  SPREADSHEET_ID: '1pEljxyzJ3rV_ElE2uw9gDN-4e1d_6RUH-313MoKpZrE',
+  SPREADSHEET_ID: 'SPREADSHEET_ID_PLACEHOLDER',
 
   // シート名
   SHEETS: {

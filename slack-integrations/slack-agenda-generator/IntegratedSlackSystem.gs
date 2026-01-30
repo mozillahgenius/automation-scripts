@@ -53,7 +53,7 @@ const BATCH_SIZE = 100;  // スプレッドシートへの一括書き込みサ�
 // - 「missing_scope」エラー: 必要な権限が不足している（Slack Appで権限追加後、再インストールが必要）
 // - ユーザーIDが実名に変換されない: users:read 権限が不足、またはENABLE_USER_INFO_FETCHがfalse
 // - プライベートチャンネルが取得できない: 
-//   1. Botをチャンネルに招待していない（/invite @Kushim Slack Governance）
+//   1. Botをチャンネルに招待していない（/invite @COMPANY_A Slack Governance）
 //   2. 権限追加後に再インストールしていない
 //   3. conversations.listでtypes='private_channel'を指定していない
 // - testUserInfoFetch()関数でユーザー情報取得をテストできます
@@ -16936,7 +16936,7 @@ function diagnosePrivateChannels() {
       result += `\n🔒 プライベートチャンネル:\n`;
       result += `${allPrivateChannels.length - privateAccessibleCount}個のチャンネルにアクセスできません。\n`;
       result += `\n各プライベートチャンネルで以下のコマンドを実行:\n`;
-      result += `   /invite @${authInfo.user || 'Kushim Slack Governance'}\n`;
+      result += `   /invite @${authInfo.user || 'COMPANY_A Slack Governance'}\n`;
     } else if (allPrivateChannels.length > 0) {
       result += `\n✅ すべてのプライベートチャンネルにアクセス可能です！\n`;
     }
@@ -16960,7 +16960,7 @@ function generateInviteList() {
     
     // Bot情報取得
     const authInfo = slackAPI('auth.test', {});
-    const botName = authInfo.user || 'Kushim Slack Governance';
+    const botName = authInfo.user || 'COMPANY_A Slack Governance';
     
     // すべてのチャンネルを取得してからプライベートを抽出
     const allChannels = [];
@@ -19687,7 +19687,7 @@ function testPrivateChannelAccess() {
       
       if (e.toString().includes('not_in_channel')) {
         console.log('→ Botをチャンネルに招待してください:');
-        console.log(`   /invite @kushim_slack_governan`);
+        console.log(`   /invite @company_slack_bot`);
       }
       
       results[results.length - 1].historyAccess = false;
@@ -19705,7 +19705,7 @@ function testPrivateChannelAccess() {
     console.log(`  - メッセージ履歴: ${r.historyAccess ? '✅' : '❌'}`);
     
     if (!r.isMember && r.infoAccess) {
-      console.log(`  📌 アクション: /invite @kushim_slack_governan を実行`);
+      console.log(`  📌 アクション: /invite @company_slack_bot を実行`);
     }
   });
   
@@ -19719,7 +19719,7 @@ function testPrivateChannelAccess() {
     message += `・メッセージ履歴: ${r.historyAccess ? 'アクセス可能' : 'アクセス不可'}\n`;
     
     if (!r.isMember && r.infoAccess) {
-      message += `→ アクション: /invite @kushim_slack_governan\n`;
+      message += `→ アクション: /invite @company_slack_bot\n`;
     }
       message += '\n';
   });
@@ -19763,7 +19763,7 @@ function syncPrivateChannels() {
   
   if (privateChannels.length === 0) {
     console.log('アクセス可能なプライベートチャンネルがありません');
-    showAlertSafely('情報', 'アクセス可能なプライベートチャンネルがありません。\nBotを招待してください: /invite @kushim_slack_governan');
+    showAlertSafely('情報', 'アクセス可能なプライベートチャンネルがありません。\nBotを招待してください: /invite @company_slack_bot');
     return { success: 0, total: 0, messages: 0 };
   }
   
@@ -19837,7 +19837,7 @@ function syncPrivateChannels() {
       console.log(`  - エラー: ${e.toString()}`);
       
       if (e.toString().includes('not_in_channel')) {
-        console.log('  → Botを招待してください: /invite @kushim_slack_governan');
+        console.log('  → Botを招待してください: /invite @company_slack_bot');
       }
     }
   });

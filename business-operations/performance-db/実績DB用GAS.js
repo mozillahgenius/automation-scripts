@@ -1,7 +1,7 @@
 //=ARRAYFORMULA(if(R2:R="","",TEXT(R2:R, "yyyy-mm")))
 // ▼▼▼【設定箇所】▼▼▼
 // 1. コピー元のスプレッドシートのURLを貼り付けてください
-const SOURCE_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1euK7Qe0WAGY7YIzfYlH29kr65fRHCeoc8-7UxZmBU2M/edit?pli=1&gid=212937189#gid=212937189";
+const SOURCE_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_PLACEHOLDER/edit?pli=1&gid=212937189#gid=212937189";
 
 // 2. コピー元のシート名を指定してください
 const SOURCE_SHEET_NAME = "ソアスク+台帳データ";

@@ -14,7 +14,7 @@
 
 1. **Google Cloud Consoleにアクセス**
    - エラーメッセージに表示されているURLをクリック:
-   - https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=138255947511
+   - https://console.developers.google.com/apis/api/photoslibrary.googleapis.com/overview?project=GCP_PROJECT_ID_PLACEHOLDER
 
 2. **APIを有効化**
    - 「有効にする」ボタンをクリック

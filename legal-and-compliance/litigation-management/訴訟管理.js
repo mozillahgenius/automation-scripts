@@ -71,11 +71,11 @@ function setupGuide() {
 
 // 設定 - 既存のスプレッドシートとシートを指定
 const CONFIG = {
-  SPREADSHEET_ID: '1gPBj76DYDm-dF_C0e-6kbUa2hmPlP2x-R7JKNS_n5iU', // ここにスプレッドシートIDを入力
+  SPREADSHEET_ID: 'SPREADSHEET_ID_PLACEHOLDER', // ここにスプレッドシートIDを入力
   SHEET_NAME: '訴訟管理',         // ここにシート名を入力
   DOCUMENT_SHEET_NAME: '関連書類', // 関連書類シート名
   TIMELINE_SHEET_NAME: '進行状況', // 進行状況シート名
-  REMINDER_EMAIL: 'kanri@kushim.co.jp',    // リマインド送信先メール
+  REMINDER_EMAIL: 'admin@example.com',    // リマインド送信先メール
   SLACK_WEBHOOK_URL: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL',                       // Slack通知用（オプション）
 };
 

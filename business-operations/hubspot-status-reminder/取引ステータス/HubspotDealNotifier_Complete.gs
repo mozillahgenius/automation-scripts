@@ -612,7 +612,7 @@ function testEmailNotification() {
     {
       dealName: 'テスト案件1',
       amount: 1000000,
-      dealStage: 'リード (souco-tenant)',
+      dealStage: 'リード (warehouse-tenant)',
       createDate: '2024/01/01',
       closeDate: '2024/03/31',
       dealOwner: 'テスト太郎',

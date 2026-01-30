@@ -13,7 +13,7 @@ function checkAndFixProjectSettings() {
   // 現在のGASプロジェクト情報
   console.log('【現在のGASプロジェクト情報】');
   console.log('スクリプトID: ' + ScriptApp.getScriptId());
-  console.log('エラーメッセージのプロジェクトID: 138255947511');
+  console.log('エラーメッセージのプロジェクトID: GCP_PROJECT_ID_PLACEHOLDER');
   console.log('※このプロジェクトではPhotos APIが有効化できていません\n');
 
   console.log('【解決方法を選択してください】\n');

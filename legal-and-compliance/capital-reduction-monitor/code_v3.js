@@ -17,13 +17,13 @@
 
 const CONFIG = {
   // 出力先スプレッドシートID
-  SPREADSHEET_ID: "1f036RjFfzHyHQTLD1lM_73qKDQnZDXdeUXYC9RVce-w",
+  SPREADSHEET_ID: "SPREADSHEET_ID_PLACEHOLDER",
 
   // 出力先シート名
   SHEET_NAME: "減資抽出",
 
   // 共有ドライブ内の対象フォルダID
-  FOLDER_ID: "1IVQTgWiMIftmc9ygO48WqWJsEGAoGEII",
+  FOLDER_ID: "DRIVE_FOLDER_ID_PLACEHOLDER",
 
   // キーワード（OR条件）
   KEYWORDS: [
@@ -80,7 +80,7 @@ const CONFIG = {
  */
 const SALES_EMAIL_TEMPLATE = `ご担当者様
 
-はじめまして。合同会社IntelligentBeastの後藤と申します。
+はじめまして。合同会社XXXXXXの担当と申します。
 
 AIを活用した業務効率化・自動化・コストカットを中心に、
 実務に踏み込む形で外部支援を行っています。
@@ -113,10 +113,10 @@ ${CONFIG.CALENDAR_LINK}
 
 何卒よろしくお願いいたします。
 
-合同会社IntelligentBeast
+合同会社XXXXXX
 代表　（氏名）
 your-email@example.com
-080-2066-1791`;
+080-XXXX-XXXX`;
 
 /**
  * ========= スプレッドシートメニュー作成 =========

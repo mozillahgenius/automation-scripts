@@ -514,7 +514,7 @@ function testEmailNotification() {
     {
       dealName: 'テスト案件1',
       amount: 1000000,
-      dealStage: 'リード (souco-tenant)',
+      dealStage: 'リード (COMPANY_B-tenant)',
       createDate: '2024/01/01',
       closeDate: '2024/03/31',
       dealOwner: 'テスト太郎',
@@ -524,7 +524,7 @@ function testEmailNotification() {
     {
       dealName: 'テスト案件2',
       amount: 500000,
-      dealStage: '提案中 (souco-reborn)',
+      dealStage: '提案中 (COMPANY_B-reborn)',
       createDate: '2024/01/15',
       closeDate: '2024/04/30',
       dealOwner: 'テスト花子',
