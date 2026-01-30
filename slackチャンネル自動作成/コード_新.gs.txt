@@ -1,0 +1,186 @@
+/**
+ * フォーム送信時に「チャンネル名」シートへデータをコピーし、採番する
+ * トリガー設定: 編集 → 現在のプロジェクトのトリガー → onFormSubmit → スプレッドシートから → フォーム送信時
+ */
+function onFormSubmit(e) {
+  const TARGET_SHEET = 'チャンネル名';
+  const HEADER_ROWS = 1;
+  const COL_PURPOSE = 1; // A: 用途
+  const COL_NUMBER = 4;  // D: チャンネル番号
+
+  // e.valuesからフォーム回答を直接取得（シート反映を待たない）
+  // e.values[0]はタイムスタンプ、e.values[1]以降が回答
+  // もしタイムスタンプがない場合は e.values[0], e.values[1] がA, B列
+  const colA = e.values[1] || e.values[0]; // 用途
+  const colB = e.values[2] || e.values[1]; // B列の値
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const targetSheet = ss.getSheetByName(TARGET_SHEET);
+  if (!targetSheet) return;
+
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+
+  try {
+    // 「チャンネル名」シートのA列が空欄の行を探す
+    const lastRow = targetSheet.getLastRow();
+    const aColValues = targetSheet
+      .getRange(HEADER_ROWS + 1, COL_PURPOSE, Math.max(1, lastRow - HEADER_ROWS), 1)
+      .getValues()
+      .flat();
+
+    let targetRow = -1;
+    for (let i = 0; i < aColValues.length; i++) {
+      if (aColValues[i] === '' || aColValues[i] === null) {
+        targetRow = HEADER_ROWS + 1 + i;
+        break;
+      }
+    }
+
+    // 空欄の行が見つからない場合は処理終了
+    if (targetRow === -1) {
+      Logger.log('空欄の行が見つかりませんでした');
+      return;
+    }
+
+    // A列とB列にデータをコピー
+    targetSheet.getRange(targetRow, 1).setValue(colA); // A列: 用途
+    targetSheet.getRange(targetRow, 2).setValue(colB); // B列
+
+    // 採番処理
+    const purpose = String(colA || '').trim();
+    if (!purpose) return;
+
+    const numCell = targetSheet.getRange(targetRow, COL_NUMBER);
+
+    // 用途に応じた番号範囲を取得
+    const [minN, maxN] = rangeByPurpose_(purpose);
+
+    // 既存番号（値として入っている数値のみ）から最大を探す
+    const allValues = targetSheet
+      .getRange(HEADER_ROWS + 1, COL_NUMBER, Math.max(1, lastRow - HEADER_ROWS), 1)
+      .getValues()
+      .flat();
+
+    let currentMax = minN - 1;
+    for (const v of allValues) {
+      if (typeof v === 'number' && v >= minN && v <= maxN) {
+        if (v > currentMax) currentMax = v;
+      }
+    }
+
+    const nextN = currentMax + 1;
+
+    if (nextN > maxN) {
+      numCell.setValue('OVER_RANGE');
+    } else {
+      numCell.setValue(nextN);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function onEdit(e) {
+  const SHEET_NAME = 'チャンネル名';
+  const HEADER_ROWS = 1;
+
+  const COL_PURPOSE = 1; // A: 用途
+  const COL_NUMBER  = 4; // D: チャンネル番号
+
+  const sh = e.range.getSheet();
+  if (sh.getName() !== SHEET_NAME) return;
+
+  const row = e.range.getRow();
+  const col = e.range.getColumn();
+  if (row <= HEADER_ROWS) return;
+
+  // 用途(A列)が編集された時だけ採番する（安定）
+  if (col !== COL_PURPOSE) return;
+
+  const purpose = String(sh.getRange(row, COL_PURPOSE).getValue() || '').trim();
+  if (!purpose) return;
+
+  const numCell = sh.getRange(row, COL_NUMBER);
+  const current = numCell.getValue();
+
+  // 既に採番済みなら何もしない
+  if (typeof current === 'number' && current >= 0) return;
+  if (current === 'OVER_RANGE') return;
+
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+
+  try {
+    // ロック後に再チェック（同時編集対策）
+    const recheck = numCell.getValue();
+    if (typeof recheck === 'number' && recheck >= 0) return;
+    if (recheck === 'OVER_RANGE') return;
+
+    const [minN, maxN] = rangeByPurpose_(purpose);
+
+    // 既存番号（値として入っている数値のみ）から最大を探す
+    const lastRow = sh.getLastRow();
+    const values = sh
+      .getRange(HEADER_ROWS + 1, COL_NUMBER, Math.max(0, lastRow - HEADER_ROWS), 1)
+      .getValues()
+      .flat();
+
+    let currentMax = minN - 1;
+    for (const v of values) {
+      if (typeof v === 'number' && v >= minN && v <= maxN) {
+        if (v > currentMax) currentMax = v;
+      }
+    }
+
+    const nextN = currentMax + 1;
+
+    if (nextN > maxN) {
+      numCell.setValue('OVER_RANGE');
+      return;
+    }
+
+    // 確定書き込み（これで重複が止まる）
+    numCell.setValue(nextN);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 用途に応じた番号範囲を返す
+ * - デフォルト:   0〜99
+ * - 組織:         100〜199
+ * - プロジェクト: 200〜899
+ * - プライベート: 900〜999
+ */
+function rangeByPurpose_(purpose) {
+  switch (purpose) {
+    case 'デフォルト':   return [0, 99];
+    case '組織':         return [100, 199];
+    case 'プロジェクト': return [200, 899];
+    case 'プライベート': return [900, 999];
+    default:             return [0, 99];
+  }
+}
+
+/**
+ * onFormSubmitのテスト用関数（手動実行可能）
+ */
+function testOnFormSubmit() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = ss.getSheetByName('フォーム形式の回答');
+  const lastRow = sourceSheet.getLastRow();
+
+  // フォーム形式の回答シートの最後の行からデータを取得
+  const colA = sourceSheet.getRange(lastRow, 1).getValue();
+  const colB = sourceSheet.getRange(lastRow, 2).getValue();
+
+  // モックイベントを作成
+  const mockEvent = {
+    values: ['', colA, colB] // タイムスタンプ, A列, B列
+  };
+
+  onFormSubmit(mockEvent);
+  Logger.log('テスト完了: チャンネル名シートを確認してください');
+}

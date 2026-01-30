@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      h2 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      .folder-tree {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 20px;
+      }
+      .folder-item {
+        padding: 8px;
+        margin: 2px 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        transition: background-color 0.2s;
+      }
+      .folder-item:hover {
+        background-color: #f5f5f5;
+      }
+      .folder-item.selected {
+        background-color: #e3f2fd;
+      }
+      .folder-icon {
+        margin-right: 8px;
+        color: #ffc107;
+      }
+      .folder-name {
+        flex: 1;
+      }
+      .expand-icon {
+        margin-right: 5px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .children {
+        margin-left: 20px;
+        display: none;
+      }
+      .children.expanded {
+        display: block;
+      }
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .select-btn {
+        background-color: #2196F3;
+        color: white;
+      }
+      .select-btn:hover {
+        background-color: #1976D2;
+      }
+      .select-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+      .cancel-btn {
+        background-color: #f44336;
+        color: white;
+      }
+      .cancel-btn:hover {
+        background-color: #d32f2f;
+      }
+      .new-folder-btn {
+        background-color: #4CAF50;
+        color: white;
+      }
+      .new-folder-btn:hover {
+        background-color: #45a049;
+      }
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+      }
+      .error {
+        color: #f44336;
+        padding: 10px;
+        background-color: #ffebee;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+      .path-display {
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-size: 12px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>出力フォルダを選択</h2>
+
+      <div class="path-display" id="selectedPath">フォルダを選択してください</div>
+
+      <div class="folder-tree" id="folderTree">
+        <div class="loading">フォルダを読み込み中...</div>
+      </div>
+
+      <div class="button-group">
+        <button class="cancel-btn" onclick="handleCancel()">キャンセル</button>
+        <button class="new-folder-btn" onclick="createNewFolder()">新規フォルダ</button>
+        <button class="select-btn" id="selectBtn" disabled onclick="handleSelect()">選択</button>
+      </div>
+    </div>
+
+    <script>
+      let selectedFolder = null;
+      let folders = {};
+
+      // フォルダ一覧を取得
+      google.script.run.withSuccessHandler(displayFolders)
+        .withFailureHandler(showError)
+        .getFolders();
+
+      function displayFolders(folderData) {
+        folders = folderData;
+        const folderTree = document.getElementById('folderTree');
+        folderTree.innerHTML = renderFolderTree(folderData);
+      }
+
+      function renderFolderTree(folderList, level = 0) {
+        let html = '';
+        for (const folder of folderList) {
+          const hasChildren = folder.children && folder.children.length > 0;
+          html += `
+            <div class="folder-item" data-id="${folder.id}" data-name="${folder.name}" style="margin-left: ${level * 20}px">
+              <span class="expand-icon" onclick="toggleExpand(event, '${folder.id}')">${hasChildren ? '▶' : ' '}</span>
+              <span class="folder-icon">📁</span>
+              <span class="folder-name" onclick="selectFolder('${folder.id}', '${folder.name}')">${folder.name}</span>
+            </div>
+          `;
+          if (hasChildren) {
+            html += `<div class="children" id="children-${folder.id}">${renderFolderTree(folder.children, level + 1)}</div>`;
+          }
+        }
+        return html;
+      }
+
+      function toggleExpand(event, folderId) {
+        event.stopPropagation();
+        const childrenDiv = document.getElementById(`children-${folderId}`);
+        const expandIcon = event.target;
+
+        if (childrenDiv) {
+          if (childrenDiv.classList.contains('expanded')) {
+            childrenDiv.classList.remove('expanded');
+            expandIcon.textContent = '▶';
+          } else {
+            childrenDiv.classList.add('expanded');
+            expandIcon.textContent = '▼';
+          }
+        }
+      }
+
+      function selectFolder(id, name) {
+        // 以前の選択を解除
+        document.querySelectorAll('.folder-item').forEach(item => {
+          item.classList.remove('selected');
+        });
+
+        // 新しいフォルダを選択
+        const selectedElement = document.querySelector(`[data-id="${id}"]`);
+        if (selectedElement) {
+          selectedElement.classList.add('selected');
+        }
+
+        selectedFolder = { id: id, name: name };
+        document.getElementById('selectedPath').textContent = `選択中: ${name}`;
+        document.getElementById('selectBtn').disabled = false;
+      }
+
+      function createNewFolder() {
+        const folderName = prompt('新しいフォルダ名を入力してください:');
+        if (folderName) {
+          const parentId = selectedFolder ? selectedFolder.id : 'root';
+          google.script.run.withSuccessHandler(() => {
+            // フォルダ一覧を再取得
+            google.script.run.withSuccessHandler(displayFolders)
+              .withFailureHandler(showError)
+              .getFolders();
+          }).withFailureHandler(showError)
+            .createFolder(folderName, parentId);
+        }
+      }
+
+      function handleSelect() {
+        if (selectedFolder) {
+          google.script.run.withSuccessHandler(() => {
+            google.script.host.close();
+          }).withFailureHandler(showError)
+            .setOutputFolder(selectedFolder.id, selectedFolder.name);
+        }
+      }
+
+      function handleCancel() {
+        google.script.host.close();
+      }
+
+      function showError(error) {
+        const folderTree = document.getElementById('folderTree');
+        folderTree.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+      }
+    </script>
+  </body>
+</html>

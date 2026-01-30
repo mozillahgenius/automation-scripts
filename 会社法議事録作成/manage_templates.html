@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    .section h3 {
+      margin-top: 0;
+      color: #555;
+    }
+    .template-item {
+      margin: 10px 0;
+      padding: 10px;
+      background-color: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .template-info {
+      flex: 1;
+    }
+    .template-actions button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"],
+    input[type="url"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 150px;
+      font-family: monospace;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .btn-secondary {
+      background-color: #757575;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #616161;
+    }
+    .btn-danger {
+      background-color: #f44336;
+      color: white;
+    }
+    .btn-danger:hover {
+      background-color: #da190b;
+    }
+    .btn-info {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-info:hover {
+      background-color: #0b7dda;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4CAF50;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid red;
+      border-radius: 4px;
+      background-color: #ffebee;
+      display: none;
+    }
+    .success-message {
+      color: green;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid green;
+      border-radius: 4px;
+      background-color: #e8f5e9;
+      display: none;
+    }
+    .placeholder-list {
+      background-color: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+    .placeholder-list h4 {
+      margin-top: 0;
+      color: #856404;
+    }
+    .placeholder-list ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .placeholder-list li {
+      margin: 5px 0;
+      color: #856404;
+    }
+    .placeholder-list code {
+      background-color: #fff;
+      padding: 2px 4px;
+      border: 1px solid #dee2e6;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    #templatePreview {
+      white-space: pre-wrap;
+      background-color: white;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h2>テンプレート管理</h2>
+
+  <!-- 既存のテンプレート一覧 -->
+  <div class="section">
+    <h3>登録済みテンプレート</h3>
+    <button onclick="loadTemplates()" style="margin-bottom: 10px;" class="btn-secondary">再読み込み</button>
+    <div id="templatesList">
+      <p>読み込み中...</p>
+    </div>
+  </div>
+
+  <!-- 新規テンプレート作成 -->
+  <div class="section">
+    <h3>新規テンプレート作成</h3>
+
+    <div class="form-group">
+      <label for="templateType">会議種別</label>
+      <input type="text" id="templateType" placeholder="例: 取締役会、株主総会、監査役会" />
+    </div>
+
+    <div class="form-group">
+      <label for="templateContent">テンプレート内容</label>
+      <textarea id="templateContent" placeholder="テンプレートのテキストをここに入力してください。プレースホルダーを使用できます。"></textarea>
+    </div>
+
+    <div class="placeholder-list">
+      <h4>使用可能なプレースホルダー</h4>
+      <ul>
+        <li><code>{{COMPANY_NAME}}</code> - 会社名</li>
+        <li><code>{{MEETING_TYPE}}</code> - 会議種別</li>
+        <li><code>{{MEETING_DATE}}</code> - 会議日時</li>
+        <li><code>{{LOCATION}}</code> - 開催場所</li>
+        <li><code>{{CHAIR}}</code> - 議長</li>
+        <li><code>{{ATTENDEES}}</code> - 出席者（旧形式）</li>
+        <li><code>{{ABSENTEES}}</code> - 欠席者（旧形式）</li>
+        <li><code>{{ATTENDING_OFFICERS}}</code> - 出席役員</li>
+        <li><code>{{ABSENT_OFFICERS}}</code> - 欠席役員</li>
+        <li><code>{{SECRETARY}}</code> - 議事録作成者</li>
+        <li><code>{{YEAR}}</code> - 年</li>
+        <li><code>{{MONTH}}</code> - 月</li>
+        <li><code>{{DAY}}</code> - 日</li>
+        <li><code>{{HOUR}}</code> - 時</li>
+        <li><code>{{MINUTE}}</code> - 分</li>
+        <li><code>{{MOTIONS_BLOCK}}</code> - 議案ブロック（自動挿入）</li>
+        <li><code>{{APPROVALS_TABLE}}</code> - 承認テーブル（自動挿入）</li>
+        <li><code>{{RESOLUTION_RESULT}}</code> - 決議結果</li>
+        <li><code>{{NEXT_MEETING}}</code> - 次回会議予定</li>
+      </ul>
+    </div>
+
+    <div class="form-group">
+      <button class="btn-primary" onclick="createTemplate()">テンプレート作成</button>
+      <button class="btn-info" onclick="loadSampleTemplate()">サンプルテンプレート読み込み</button>
+      <button class="btn-secondary" onclick="previewTemplate()">プレビュー</button>
+      <button class="btn-info" onclick="createAllSampleTemplates()">サンプル一括作成</button>
+    </div>
+
+    <div id="templatePreview" style="display: none;"></div>
+  </div>
+
+  <!-- 既存ドキュメントからテンプレート作成 -->
+  <div class="section">
+    <h3>既存ドキュメントからテンプレート作成</h3>
+
+    <div class="form-group">
+      <label for="existingDocUrl">Google ドキュメント URL</label>
+      <input type="url" id="existingDocUrl" placeholder="https://docs.google.com/document/d/..." />
+    </div>
+
+    <div class="form-group">
+      <label for="existingDocType">会議種別</label>
+      <input type="text" id="existingDocType" placeholder="例: 取締役会" />
+    </div>
+
+    <div class="form-group">
+      <button class="btn-primary" onclick="importFromDoc()">ドキュメントからインポート</button>
+    </div>
+  </div>
+
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>処理中...</p>
+  </div>
+
+  <div id="errorMessage" class="error-message"></div>
+  <div id="successMessage" class="success-message"></div>
+
+  <!-- デバッグ用 -->
+  <div style="margin-top: 20px; padding: 10px; background-color: #f0f0f0; border-radius: 4px; font-size: 12px;">
+    <strong>デバッグ情報:</strong>
+    <button onclick="testConnection()" style="margin-left: 10px; padding: 2px 8px; font-size: 12px;">接続テスト</button>
+    <div id="debugInfo" style="margin-top: 10px; font-family: monospace;"></div>
+  </div>
+
+  <script>
+    // ページ読み込み時にテンプレート一覧を取得
+    window.onload = function() {
+      console.log('Page loaded, loading templates...');
+      loadTemplates();
+    };
+
+    // テンプレート一覧を読み込み
+    function loadTemplates() {
+      console.log('loadTemplates called');
+      const container = document.getElementById('templatesList');
+      container.innerHTML = '<p>読み込み中...</p>';
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(templates) {
+            console.log('Templates loaded:', templates);
+            displayTemplates(templates);
+          })
+          .withFailureHandler(function(error) {
+            console.error('Load templates error:', error);
+            container.innerHTML = '<p style="color: red;">読み込みエラー: ' + error + '</p>';
+            showError('テンプレート読み込みエラー: ' + error);
+          })
+          .getTemplateList();
+      } catch (e) {
+        console.error('Exception in loadTemplates:', e);
+        container.innerHTML = '<p style="color: red;">例外エラー: ' + e.message + '</p>';
+      }
+    }
+
+    // テンプレート一覧を表示
+    function displayTemplates(templates) {
+      const container = document.getElementById('templatesList');
+
+      if (!templates || templates.length === 0) {
+        container.innerHTML = '<p>登録されているテンプレートはありません。</p>';
+        return;
+      }
+
+      let html = '';
+      templates.forEach(template => {
+        html += `
+          <div class="template-item">
+            <div class="template-info">
+              <strong>${template.type}</strong>
+              ${template.docId ? `<br><small>Doc ID: ${template.docId}</small>` : ''}
+              ${template.description ? `<br><small>${template.description}</small>` : ''}
+            </div>
+            <div class="template-actions">
+              ${template.docUrl ? `<button class="btn-info" onclick="window.open('${template.docUrl}', '_blank')">開く</button>` : ''}
+              <button class="btn-secondary" onclick="editTemplate('${template.type}')">編集</button>
+              <button class="btn-danger" onclick="deleteTemplate('${template.type}')">削除</button>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // サンプルテンプレート一括作成
+    function createAllSampleTemplates() {
+      if (!confirm('取締役会、株主総会、監査役会のサンプルテンプレートを作成しますか？')) {
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showSuccess(result.message);
+            loadTemplates(); // テンプレート一覧を更新
+          } else {
+            showError(result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showError('サンプルテンプレート作成エラー: ' + error.toString());
+        })
+        .createSampleTemplates();
+    }
+
+    // サンプルテンプレートを読み込み
+    function loadSampleTemplate() {
+      const sampleTemplate = `{{COMPANY_NAME}}
+第{{MEETING_NUMBER}}回{{MEETING_TYPE}}議事録
+
+日時: {{YEAR}}年{{MONTH}}月{{DAY}}日 {{HOUR}}時{{MINUTE}}分
+場所: {{LOCATION}}
+議長: {{CHAIR}}
+
+出席役員:
+{{ATTENDING_OFFICERS}}
+
+欠席役員:
+{{ABSENT_OFFICERS}}
+
+議事録作成者: {{SECRETARY}}
+
+【開会】
+定刻、{{CHAIR}}が議長となり、本{{MEETING_TYPE}}の成立を確認の上、開会を宣言した。
+
+【議事】
+{{MOTIONS_BLOCK}}
+
+【決議結果】
+{{RESOLUTION_RESULT}}
+
+【次回予定】
+{{NEXT_MEETING}}
+
+【閉会】
+以上をもって本日の議事がすべて終了したので、議長は閉会を宣言した。
+
+【承認】
+{{APPROVALS_TABLE}}
+
+以上、この議事録が正確であることを証するため、出席役員は記名押印する。
+
+{{YEAR}}年{{MONTH}}月{{DAY}}日
+
+{{COMPANY_NAME}}
+議長 {{CHAIR}} ㊞
+`;
+
+      document.getElementById('templateContent').value = sampleTemplate;
+      showSuccess('サンプルテンプレートを読み込みました');
+    }
+
+    // テンプレートのプレビュー
+    function previewTemplate() {
+      const content = document.getElementById('templateContent').value;
+      const preview = document.getElementById('templatePreview');
+
+      if (!content) {
+        showError('テンプレート内容を入力してください');
+        return;
+      }
+
+      // サンプルデータでプレースホルダーを置換
+      const sampleData = {
+        '{{COMPANY_NAME}}': '株式会社サンプル',
+        '{{MEETING_TYPE}}': '取締役会',
+        '{{MEETING_NUMBER}}': '123',
+        '{{MEETING_DATE}}': '2024年1月15日 14:00',
+        '{{YEAR}}': '2024',
+        '{{MONTH}}': '1',
+        '{{DAY}}': '15',
+        '{{HOUR}}': '14',
+        '{{MINUTE}}': '00',
+        '{{LOCATION}}': '本社会議室',
+        '{{CHAIR}}': '山田太郎（代表取締役社長）',
+        '{{ATTENDING_OFFICERS}}': '山田太郎（代表取締役社長）、田中一郎（取締役）、鈴木花子（取締役）',
+        '{{ABSENT_OFFICERS}}': '佐藤次郎（社外取締役）',
+        '{{SECRETARY}}': '総務部 高橋',
+        '{{MOTIONS_BLOCK}}': '［議案がここに表示されます］',
+        '{{APPROVALS_TABLE}}': '［承認テーブルがここに表示されます］',
+        '{{RESOLUTION_RESULT}}': '上記議案について慎重に審議した結果、全員一致で承認可決された。',
+        '{{NEXT_MEETING}}': '次回取締役会は2024年2月15日14時より開催予定'
+      };
+
+      let previewContent = content;
+      for (const [placeholder, value] of Object.entries(sampleData)) {
+        previewContent = previewContent.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+      }
+
+      preview.textContent = previewContent;
+      preview.style.display = 'block';
+    }
+
+    // テンプレート作成
+    function createTemplate() {
+      console.log('createTemplate function called');
+
+      const type = document.getElementById('templateType').value.trim();
+      const content = document.getElementById('templateContent').value.trim();
+
+      console.log('Type:', type);
+      console.log('Content length:', content.length);
+
+      if (!type || !content) {
+        showError('会議種別とテンプレート内容を入力してください');
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      console.log('Calling createTemplateDocument...');
+
+      google.script.run
+        .withSuccessHandler(onCreateSuccess)
+        .withFailureHandler(onCreateError)
+        .createTemplateDocument({
+          type: type,
+          content: content
+        });
+    }
+
+    // 既存ドキュメントからインポート
+    function importFromDoc() {
+      const url = document.getElementById('existingDocUrl').value.trim();
+      const type = document.getElementById('existingDocType').value.trim();
+
+      if (!url || !type) {
+        showError('URLと会議種別を入力してください');
+        return;
+      }
+
+      // URLからドキュメントIDを抽出
+      const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) {
+        showError('有効なGoogle ドキュメントURLを入力してください');
+        return;
+      }
+
+      const docId = match[1];
+
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(onImportSuccess)
+        .withFailureHandler(onImportError)
+        .importTemplateFromDoc({
+          docId: docId,
+          type: type
+        });
+    }
+
+    // テンプレート編集
+    function editTemplate(type) {
+      google.script.run
+        .withSuccessHandler(function(template) {
+          if (template && template.docId) {
+            window.open(`https://docs.google.com/document/d/${template.docId}/edit`, '_blank');
+          } else {
+            showError('テンプレートが見つかりません');
+          }
+        })
+        .withFailureHandler(showError)
+        .getTemplateByType(type);
+    }
+
+    // テンプレート削除
+    function deleteTemplate(type) {
+      if (!confirm(`「${type}」のテンプレートを削除してもよろしいですか？`)) {
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showSuccess(result.message);
+            loadTemplates();
+          } else {
+            showError(result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showError(error);
+        })
+        .deleteTemplate(type);
+    }
+
+    // 成功時の処理
+    function onCreateSuccess(result) {
+      showLoading(false);
+      if (result.success) {
+        showSuccess(`テンプレート「${result.type}」を作成しました`);
+        // 少し遅延してから再読み込み（データ反映のため）
+        setTimeout(function() {
+          loadTemplates();
+        }, 1000);
+        // フォームをクリア
+        document.getElementById('templateType').value = '';
+        document.getElementById('templateContent').value = '';
+        document.getElementById('templatePreview').style.display = 'none';
+      } else {
+        showError(result.error);
+      }
+    }
+
+    function onImportSuccess(result) {
+      showLoading(false);
+      if (result.success) {
+        showSuccess(`テンプレート「${result.type}」をインポートしました`);
+        loadTemplates();
+        // フォームをクリア
+        document.getElementById('existingDocUrl').value = '';
+        document.getElementById('existingDocType').value = '';
+      } else {
+        showError(result.error);
+      }
+    }
+
+    // エラー時の処理
+    function onCreateError(error) {
+      console.error('Template creation error:', error);
+      showLoading(false);
+      showError('テンプレート作成エラー: ' + error.toString());
+    }
+
+    function onImportError(error) {
+      console.error('Import error:', error);
+      showLoading(false);
+      showError('インポートエラー: ' + error.toString());
+    }
+
+    // UI制御関数
+    function showLoading(show) {
+      document.querySelector('.loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+
+    // 接続テスト
+    function testConnection() {
+      const debugDiv = document.getElementById('debugInfo');
+      debugDiv.innerHTML = '接続テスト中...';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          debugDiv.innerHTML = '✅ 接続成功<br>Templates: ' + JSON.stringify(result, null, 2);
+        })
+        .withFailureHandler(function(error) {
+          debugDiv.innerHTML = '❌ 接続失敗: ' + error.toString();
+        })
+        .getTemplateList();
+    }
+  </script>
+</body>
+</html>

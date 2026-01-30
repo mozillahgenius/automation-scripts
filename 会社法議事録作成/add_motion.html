@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    #conditions {
+      min-height: 60px;
+      resize: vertical;
+    }
+    small {
+      color: #666;
+      font-size: 12px;
+      display: block;
+      margin-top: 3px;
+    }
+    select {
+      cursor: pointer;
+    }
+    .editor-container {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 200px;
+      padding: 10px;
+      background-color: white;
+    }
+    .editor-toolbar {
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      margin: -10px -10px 10px -10px;
+    }
+    .editor-toolbar button {
+      padding: 5px 10px;
+      margin-right: 5px;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .editor-toolbar button:hover {
+      background-color: #f0f0f0;
+    }
+    #htmlInput {
+      min-height: 150px;
+      font-family: monospace;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      margin-right: 10px;
+    }
+    .preview-container {
+      border: 1px solid #4CAF50;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      background-color: #f9f9f9;
+      display: none;
+    }
+    .preview-header {
+      font-weight: bold;
+      color: #4CAF50;
+      margin-bottom: 10px;
+    }
+    .preview-content {
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .button-group {
+      margin-top: 20px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .btn-secondary {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #0b7dda;
+    }
+    .btn-cancel {
+      background-color: #f44336;
+      color: white;
+    }
+    .btn-cancel:hover {
+      background-color: #da190b;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4CAF50;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid red;
+      border-radius: 4px;
+      background-color: #ffebee;
+      display: none;
+    }
+    .success-message {
+      color: green;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid green;
+      border-radius: 4px;
+      background-color: #e8f5e9;
+      display: none;
+    }
+    .required {
+      color: red;
+    }
+    .attachment-info {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+    }
+    .compliance-checklist {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      display: none;
+    }
+    .compliance-checklist h4 {
+      margin-top: 0;
+      color: #856404;
+    }
+    .compliance-checklist ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .compliance-checklist li {
+      margin: 5px 0;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <h2>議案追加</h2>
+
+  <div class="form-group">
+    <label for="docSelect">対象ドキュメント <span class="required">*</span></label>
+    <select id="docSelect" required onchange="loadMotions()">
+      <option value="">選択してください</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="motionNumber">議案番号 <span class="required">*</span></label>
+    <input type="number" id="motionNumber" min="1" placeholder="例: 1" required>
+  </div>
+
+  <div class="form-group">
+    <label for="motionTitle">議案タイトル <span class="required">*</span></label>
+    <input type="text" id="motionTitle" placeholder="例: 〇〇に関する件" required onblur="checkCompliance()">
+  </div>
+
+  <div class="compliance-checklist" id="complianceChecklist">
+    <h4>法的確認事項</h4>
+    <ul id="checklistItems"></ul>
+  </div>
+
+  <div class="form-group">
+    <label for="htmlInput">議案内容 <span class="required">*</span></label>
+    <div class="editor-container">
+      <div class="editor-toolbar">
+        <button type="button" onclick="insertTag('h3'); return false;">見出し</button>
+        <button type="button" onclick="insertTag('b'); return false;">太字</button>
+        <button type="button" onclick="insertTag('ul'); return false;">箇条書き</button>
+        <button type="button" onclick="insertTag('ol'); return false;">番号付きリスト</button>
+        <button type="button" onclick="insertLineBreak(); return false;">改行</button>
+      </div>
+      <textarea id="htmlInput" placeholder="議案の詳細内容を入力してください"></textarea>
+    </div>
+    <small>必要に応じて上部のボタンで書式設定ができます</small>
+  </div>
+
+  <div class="form-group">
+    <label for="presenter">説明者（進行担当者）</label>
+    <select id="presenterSelect" onchange="onPresenterSelected()">
+      <option value="">役員リストから選択</option>
+    </select>
+    <input type="text" id="presenter" placeholder="または直接入力: 例: 山田太郎 代表取締役" style="margin-top: 10px;">
+    <small>役員リストから選択するか、直接入力してください</small>
+  </div>
+
+  <div class="form-group">
+    <label for="resolutionResult">決議結果</label>
+    <select id="resolutionResult">
+      <option value="">（会議終了後に記入）</option>
+      <option value="全員一致承認">全員一致で承認</option>
+      <option value="賛成多数承認">賛成多数で承認</option>
+      <option value="条件付承認">条件付きで承認</option>
+      <option value="継続審議">継続審議</option>
+      <option value="否決">否決</option>
+      <option value="報告事項">報告事項（決議不要）</option>
+    </select>
+    <small>会議終了後に記入することも可能です</small>
+  </div>
+
+  <div class="form-group">
+    <label for="votingDetails">賛否の詳細</label>
+    <input type="text" id="votingDetails" placeholder="例: 賛成8名、反対2名、棄権1名">
+    <small>会議終了後に記入することも可能です</small>
+  </div>
+
+  <div class="form-group">
+    <label for="specialInterest">特別利害関係人</label>
+    <input type="text" id="specialInterest" placeholder="例: 田中取締役（本議案の契約相手方代表のため）">
+    <small>会議終了後に記入することも可能です</small>
+  </div>
+
+  <div class="form-group">
+    <label for="conditions">付帯条件・留意事項</label>
+    <textarea id="conditions" placeholder="例: 実施にあたっては月次で進捗報告を行うこと"></textarea>
+  </div>
+
+  <div class="checkbox-group">
+    <input type="checkbox" id="useAI" checked>
+    <label for="useAI" style="display: inline; font-weight: normal;">AI整形を使用する（上場企業基準）</label>
+  </div>
+
+  <div class="checkbox-group">
+    <input type="checkbox" id="hasAttachment" onchange="toggleAttachmentInfo()">
+    <label for="hasAttachment" style="display: inline; font-weight: normal;">添付資料あり</label>
+  </div>
+
+  <div id="attachmentInfo" class="attachment-info">
+    <label for="attachmentMemo">添付資料メモ</label>
+    <input type="text" id="attachmentMemo" placeholder="例: 別紙1参照、詳細資料は共有フォルダに保存">
+  </div>
+
+  <div class="preview-container" id="previewContainer">
+    <div class="preview-header">プレビュー（AI整形後）</div>
+    <div class="preview-content" id="previewContent"></div>
+  </div>
+
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>処理中...</p>
+  </div>
+
+  <div id="errorMessage" class="error-message"></div>
+  <div id="successMessage" class="success-message"></div>
+
+  <div class="button-group">
+    <button type="button" class="btn-secondary" id="previewBtn">プレビュー</button>
+    <button type="button" class="btn-primary" id="addMotionBtn">議案追加</button>
+    <button type="button" class="btn-cancel" id="cancelBtn">キャンセル</button>
+  </div>
+
+  <script>
+    let currentDocId = null;
+    let existingMotions = [];
+
+    let officersList = [];
+
+    // ページ読み込み時にドキュメント一覧を取得
+    window.onload = function() {
+      console.log('ページ読み込み完了、ドキュメント一覧を取得中...');
+
+      // 役員リストを取得
+      loadOfficers();
+
+      // ボタンにイベントリスナーを設定
+      const previewBtn = document.getElementById('previewBtn');
+      const addMotionBtn = document.getElementById('addMotionBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+
+      if (previewBtn) {
+        console.log('プレビューボタン発見');
+        previewBtn.addEventListener('click', previewMotion);
+      } else {
+        console.error('プレビューボタンが見つかりません');
+      }
+
+      if (addMotionBtn) {
+        console.log('議案追加ボタン発見');
+        addMotionBtn.addEventListener('click', addMotion);
+      } else {
+        console.error('議案追加ボタンが見つかりません');
+      }
+
+      if (cancelBtn) {
+        console.log('キャンセルボタン発見');
+        cancelBtn.addEventListener('click', function() {
+          google.script.host.close();
+        });
+      } else {
+        console.error('キャンセルボタンが見つかりません');
+      }
+
+      // 初期化確認
+      const select = document.getElementById('docSelect');
+      if (!select) {
+        console.error('docSelectが見つかりません');
+        alert('エラー: ドキュメント選択要素が見つかりません');
+        return;
+      }
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(docsJson) {
+            console.log('getDocsList成功:', docsJson);
+            console.log('docsJsonの型:', typeof docsJson);
+
+            if (docsJson === undefined) {
+              console.error('docsJsonがundefinedです');
+              select.innerHTML = '<option value="">エラー: データを受信できませんでした</option>';
+              return;
+            }
+
+            // JSON文字列をパース
+            let docs;
+            try {
+              if (typeof docsJson === 'string') {
+                docs = JSON.parse(docsJson);
+                console.log('JSONパース成功:', docs);
+              } else if (Array.isArray(docsJson)) {
+                // すでに配列の場合
+                docs = docsJson;
+                console.log('既に配列形式:', docs);
+              } else {
+                docs = [];
+                console.log('予期しない形式:', docsJson);
+              }
+            } catch(e) {
+              console.error('JSONパースエラー:', e);
+              select.innerHTML = '<option value="">JSONパースエラー</option>';
+              return;
+            }
+
+            loadDocuments(docs);
+          })
+          .withFailureHandler(function(error) {
+            console.error('getDocsList失敗:', error);
+            showError('ドキュメント一覧の取得に失敗しました: ' + error.toString());
+            // エラー時でも選択肢を表示
+            select.innerHTML = '<option value="">エラー：' + error.toString() + '</option>';
+          })
+          .getDocsList();
+      } catch(e) {
+        console.error('google.script.run実行エラー:', e);
+        select.innerHTML = '<option value="">実行エラー：' + e.toString() + '</option>';
+      }
+    };
+
+    function loadDocuments(docs) {
+      const select = document.getElementById('docSelect');
+
+      console.log('loadDocuments called');
+      console.log('受信したdocs:', docs);
+      console.log('docsの型:', typeof docs);
+      console.log('docsは配列?:', Array.isArray(docs));
+
+      // デフォルトオプションをクリア
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      // データがない場合
+      if (!docs) {
+        select.innerHTML = '<option value="">ドキュメントが取得できませんでした</option>';
+        console.error('docs is null or undefined');
+        return;
+      }
+
+      if (!Array.isArray(docs)) {
+        select.innerHTML = '<option value="">データ形式エラー（配列ではありません）</option>';
+        console.error('docs is not an array:', docs);
+        return;
+      }
+
+      if (docs.length === 0) {
+        select.innerHTML = '<option value="">ドキュメントがありません</option>';
+        console.log('ドキュメント配列が空です');
+        return;
+      }
+
+      console.log('ドキュメント数:', docs.length);
+
+      // 各ドキュメントの内容を確認
+      docs.forEach((doc, index) => {
+        console.log(`ドキュメント${index + 1}:`, doc);
+        console.log(`  - docId: ${doc.docId}`);
+        console.log(`  - title: ${doc.title}`);
+        console.log(`  - status: ${doc.status}`);
+        console.log(`  - meetingType: ${doc.meetingType}`);
+      });
+
+      // 編集中のドキュメントのみ表示
+      const editableDocs = docs.filter(doc => {
+        const isEditable = doc.status === '編集中' || doc.status === '承認待ち';
+        console.log(`${doc.title} は編集可能?: ${isEditable} (status: ${doc.status})`);
+        return isEditable;
+      });
+
+      console.log('編集可能なドキュメント数:', editableDocs.length);
+
+      if (editableDocs.length === 0) {
+        select.innerHTML = '<option value="">編集可能なドキュメントがありません（ドラフト作成が必要です）</option>';
+        return;
+      }
+
+      editableDocs.forEach((doc, index) => {
+        const option = document.createElement('option');
+        option.value = doc.docId;
+
+        // 日付のフォーマットを改善
+        let dateStr = '日付なし';
+        if (doc.meetingDate) {
+          try {
+            dateStr = new Date(doc.meetingDate).toLocaleDateString('ja-JP');
+          } catch (e) {
+            console.error('日付フォーマットエラー:', e);
+            dateStr = doc.meetingDate;
+          }
+        }
+
+        option.textContent = `${doc.title || '無題'} (${doc.meetingType || '種別不明'} - ${dateStr})`;
+        select.appendChild(option);
+        console.log(`オプション${index + 1}を追加:`, option.textContent);
+      });
+
+      console.log('ドキュメントリスト作成完了');
+    }
+
+    function loadMotions() {
+      const docId = document.getElementById('docSelect').value;
+      if (!docId) {
+        return;
+      }
+
+      currentDocId = docId;
+
+      // 既存の議案を取得して次の番号を提案
+      google.script.run
+        .withSuccessHandler(function(motions) {
+          console.log('既存議案取得成功:', motions);
+
+          // 決議事項のみをフィルタ
+          const resolutions = (motions || []).filter(m => !m.type || m.type === '決議事項');
+          existingMotions = resolutions;
+
+          // 最大の議案番号を取得
+          let maxNumber = 0;
+          if (resolutions.length > 0) {
+            resolutions.forEach(motion => {
+              const num = parseInt(motion.motionNumber);
+              if (num > maxNumber) {
+                maxNumber = num;
+              }
+            });
+          }
+
+          // 次の議案番号を提案（ユーザーが既に入力している場合は上書きしない）
+          const motionNumberInput = document.getElementById('motionNumber');
+          if (!motionNumberInput.value || motionNumberInput.value === '' || motionNumberInput.value === '0') {
+            motionNumberInput.value = maxNumber + 1;
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('議案リスト取得エラー:', error);
+          existingMotions = [];
+          // エラーを表示するが、処理は続行可能にする
+        })
+        .getMotionsList(docId);
+    }
+
+    // 役員リストを読み込み
+    function loadOfficers() {
+      google.script.run
+        .withSuccessHandler(function(officers) {
+          if (officers && officers.length > 0) {
+            officersList = officers;
+            const select = document.getElementById('presenterSelect');
+            select.innerHTML = '<option value="">役員リストから選択</option>';
+
+            officers.forEach(officer => {
+              const option = document.createElement('option');
+              option.value = `${officer.name} ${officer.position}`;
+              option.textContent = `${officer.name} ${officer.position}`;
+              select.appendChild(option);
+            });
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('役員リスト取得エラー:', error);
+        })
+        .getOfficersList();
+    }
+
+    // プレゼンター選択時の処理
+    function onPresenterSelected() {
+      const select = document.getElementById('presenterSelect');
+      const input = document.getElementById('presenter');
+      if (select.value) {
+        input.value = '';  // 選択したら直接入力をクリア
+      }
+    }
+
+    // 法的検討項目チェック
+    function checkCompliance() {
+      const title = document.getElementById('motionTitle').value;
+      if (!title) return;
+
+      console.log('法的チェック開始:', title);
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(checklist) {
+            console.log('法的チェックリスト取得:', checklist);
+            if (checklist && checklist.length > 0) {
+              const checklistDiv = document.getElementById('complianceChecklist');
+              const itemsList = document.getElementById('checklistItems');
+
+              itemsList.innerHTML = '';
+              checklist.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                itemsList.appendChild(li);
+              });
+
+              checklistDiv.style.display = 'block';
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.error('法的チェックリスト取得エラー:', error);
+            // エラーでも処理を続行
+          })
+          .generateComplianceChecklist(title);
+      } catch (e) {
+        console.error('checkCompliance例外:', e);
+      }
+    }
+
+    function insertTag(tag) {
+      // イベントの伝播を停止
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const textarea = document.getElementById('htmlInput');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = textarea.value.substring(start, end);
+
+      let insertText = '';
+      switch (tag) {
+        case 'h3':
+          insertText = `<h3>${selectedText || '見出し'}</h3>`;
+          break;
+        case 'b':
+          insertText = `<b>${selectedText || '太字テキスト'}</b>`;
+          break;
+        case 'ul':
+          insertText = `<ul>\n  <li>${selectedText || 'リスト項目'}</li>\n</ul>`;
+          break;
+        case 'ol':
+          insertText = `<ol>\n  <li>${selectedText || '番号付き項目'}</li>\n</ol>`;
+          break;
+      }
+
+      const before = textarea.value.substring(0, start);
+      const after = textarea.value.substring(end);
+      textarea.value = before + insertText + after;
+
+      // カーソル位置を調整
+      textarea.selectionStart = start + insertText.length;
+      textarea.selectionEnd = start + insertText.length;
+      textarea.focus();
+    }
+
+    function insertLineBreak() {
+      // イベントの伝播を停止
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const textarea = document.getElementById('htmlInput');
+      const start = textarea.selectionStart;
+      const before = textarea.value.substring(0, start);
+      const after = textarea.value.substring(start);
+
+      textarea.value = before + '<br>\n' + after;
+      textarea.selectionStart = start + 5;
+      textarea.selectionEnd = start + 5;
+      textarea.focus();
+    }
+
+    function toggleAttachmentInfo() {
+      const checkbox = document.getElementById('hasAttachment');
+      const info = document.getElementById('attachmentInfo');
+      info.style.display = checkbox.checked ? 'block' : 'none';
+    }
+
+    function previewMotion() {
+      const title = document.getElementById('motionTitle').value;
+      const htmlInput = document.getElementById('htmlInput').value;
+      const useAI = document.getElementById('useAI').checked;
+
+      if (!title || !htmlInput) {
+        showError('議案タイトルと内容を入力してください');
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showPreview(result.preview);
+          } else {
+            showError(result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showError('プレビューエラー: ' + error.toString());
+        })
+        .previewMotion(htmlInput, title, useAI);
+    }
+
+    function showPreview(content) {
+      const container = document.getElementById('previewContainer');
+      const contentDiv = document.getElementById('previewContent');
+
+      contentDiv.textContent = content;
+      container.style.display = 'block';
+    }
+
+    function addMotion(event) {
+      console.log('===== addMotion関数が呼び出されました =====');
+      console.log('Event:', event);
+
+      // イベントがあればデフォルト動作を防ぐ
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      // ボタンの二重クリック防止
+      const addButton = document.getElementById('addMotionBtn');
+      console.log('addButton要素:', addButton);
+
+      if (addButton && addButton.disabled) {
+        console.log('ボタンは既に無効化されています');
+        return;
+      }
+      if (addButton) {
+        console.log('ボタンを無効化します');
+        addButton.disabled = true;
+      }
+
+      // バリデーション
+      const docId = document.getElementById('docSelect').value;
+      const motionNumber = document.getElementById('motionNumber').value;
+      const title = document.getElementById('motionTitle').value;
+      const htmlInput = document.getElementById('htmlInput').value;
+
+      console.log('入力値確認:');
+      console.log('docId:', docId);
+      console.log('motionNumber:', motionNumber);
+      console.log('title:', title);
+      console.log('htmlInput:', htmlInput);
+
+      if (!docId || !motionNumber || !title || !htmlInput) {
+        showError('必須項目を入力してください');
+        console.log('必須項目チェックエラー');
+        if (addButton) addButton.disabled = false;
+        return;
+      }
+
+      // 議案番号の重複チェック（クライアント側）
+      if (existingMotions && existingMotions.length > 0) {
+        const isDuplicate = existingMotions.some(m =>
+          m.motionNumber && m.motionNumber.toString() === motionNumber.toString()
+        );
+
+        if (isDuplicate) {
+          showError(`議案番号${motionNumber}は既に使用されています`);
+          if (addButton) addButton.disabled = false;
+          return;
+        }
+      }
+
+      // パラメータを個別に準備
+      const presenterSelect = document.getElementById('presenterSelect').value;
+      const presenterInput = document.getElementById('presenter').value;
+      const presenter = presenterSelect || presenterInput;
+      const resolutionResult = document.getElementById('resolutionResult').value || '';
+      const votingDetails = document.getElementById('votingDetails').value;
+      const specialInterest = document.getElementById('specialInterest').value;
+      const conditions = document.getElementById('conditions').value;
+      const hasAttachment = document.getElementById('hasAttachment').checked;
+      const attachmentMemo = document.getElementById('attachmentMemo').value;
+      const useAI = document.getElementById('useAI').checked;
+
+      console.log('送信するパラメータ:');
+      console.log('- docId:', docId);
+      console.log('- motionNumber:', motionNumber);
+      console.log('- title:', title);
+      console.log('- inputHtml:', htmlInput);
+      console.log('- presenter:', presenter);
+      console.log('- resolutionResult:', resolutionResult);
+      console.log('- votingDetails:', votingDetails);
+      console.log('- specialInterest:', specialInterest);
+      console.log('- conditions:', conditions);
+      console.log('- hasAttachment:', hasAttachment);
+      console.log('- attachmentMemo:', attachmentMemo);
+      console.log('- useAI:', useAI);
+
+      showLoading(true);
+      hideMessages();
+
+      // パラメータオブジェクトとして送信（パラメータが多いため）
+      const params = {
+        docId: docId,
+        motionNumber: motionNumber,
+        title: title,
+        inputHtml: htmlInput,
+        presenter: presenter,
+        resolutionResult: resolutionResult,
+        votingDetails: votingDetails,
+        specialInterest: specialInterest,
+        conditions: conditions,
+        hasAttachment: hasAttachment,
+        attachmentMemo: attachmentMemo,
+        useAI: useAI,
+        type: '決議事項'
+      };
+
+      console.log('google.script.runを実行します...');
+      console.log('送信パラメータ:', params);
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            console.log('サーバーからの応答:', result);
+            onAddSuccess(result);
+          })
+          .withFailureHandler(function(error) {
+            console.error('サーバーエラー:', error);
+            onAddError(error);
+          })
+          .addMotion(params);
+
+        console.log('google.script.run呼び出し完了');
+      } catch (e) {
+        console.error('google.script.run実行中のエラー:', e);
+        showError('システムエラー: ' + e.toString());
+        const addBtn = document.getElementById('addMotionBtn');
+        if (addBtn) addBtn.disabled = false;
+        showLoading(false);
+      }
+    }
+
+    function onAddSuccess(result) {
+      console.log('onAddSuccess呼び出されました:', result);
+      showLoading(false);
+
+      if (result && result.success) {
+        showSuccess(result.message || '議案を追加しました');
+
+        // フォームをリセット
+        document.getElementById('motionNumber').value = parseInt(document.getElementById('motionNumber').value) + 1;
+        document.getElementById('motionTitle').value = '';
+        document.getElementById('htmlInput').value = '';
+        document.getElementById('presenter').value = '';
+        document.getElementById('resolutionResult').value = '';
+        document.getElementById('votingDetails').value = '';
+        document.getElementById('specialInterest').value = '';
+        document.getElementById('conditions').value = '';
+        document.getElementById('hasAttachment').checked = false;
+        document.getElementById('attachmentMemo').value = '';
+        document.getElementById('previewContainer').style.display = 'none';
+        document.getElementById('complianceChecklist').style.display = 'none';
+        toggleAttachmentInfo();
+
+        // 議案リストを再読み込み
+        loadMotions();
+
+        // ボタンを再度有効にする
+        const addButton = document.getElementById('addMotionBtn');
+        if (addButton) addButton.disabled = false;
+      } else {
+        showError(result ? result.error : '不明なエラー');
+        // エラー時もボタンを再度有効にする
+        const addButton = document.getElementById('addMotionBtn');
+        if (addButton) addButton.disabled = false;
+      }
+    }
+
+    function onAddError(error) {
+      console.error('onAddError呼び出されました:', error);
+      showLoading(false);
+      showError('エラーが発生しました: ' + error.toString());
+      // エラー時もボタンを再度有効にする
+      const addButton = document.getElementById('addMotionBtn');
+      if (addButton) addButton.disabled = false;
+    }
+
+    function showLoading(show) {
+      document.querySelector('.loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

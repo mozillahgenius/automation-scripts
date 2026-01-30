@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      margin-right: 5px;
+    }
+    .tab.active {
+      background-color: white;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      margin-right: 10px;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 5px;
+    }
+    .api-key-section {
+      background-color: #f0f8ff;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .warning {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      color: #856404;
+    }
+    .success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      color: #155724;
+    }
+    .button-group {
+      margin-top: 20px;
+      text-align: center;
+      padding-top: 20px;
+      border-top: 1px solid #ddd;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .btn-secondary {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #0b7dda;
+    }
+    .btn-danger {
+      background-color: #f44336;
+      color: white;
+    }
+    .btn-danger:hover {
+      background-color: #da190b;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4CAF50;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-left: 10px;
+    }
+    .status-active {
+      background-color: #4CAF50;
+    }
+    .status-inactive {
+      background-color: #f44336;
+    }
+    .template-list {
+      margin-top: 10px;
+    }
+    .template-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 5px;
+    }
+    .template-item input {
+      width: 60%;
+    }
+  </style>
+</head>
+<body>
+  <h2>システム設定</h2>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('general')">一般設定</div>
+    <div class="tab" onclick="switchTab('openai')">OpenAI設定</div>
+    <div class="tab" onclick="switchTab('notification')">通知設定</div>
+    <div class="tab" onclick="switchTab('templates')">テンプレート</div>
+  </div>
+
+  <!-- 一般設定タブ -->
+  <div id="general-tab" class="tab-content active">
+    <h3>基本設定</h3>
+
+    <div class="form-group">
+      <label for="fromName">システム名称</label>
+      <input type="text" id="fromName" placeholder="例: 議事録管理システム">
+      <div class="help-text">メール送信時の送信者名として使用されます</div>
+    </div>
+
+    <div class="form-group">
+      <label for="replyTo">管理者メールアドレス</label>
+      <input type="email" id="replyTo" placeholder="admin@example.com">
+      <div class="help-text">システム通知の返信先アドレス</div>
+    </div>
+
+    <div class="form-group">
+      <label for="defaultDeadline">承認期限デフォルト（日）</label>
+      <input type="number" id="defaultDeadline" min="1" max="30" value="7">
+    </div>
+
+    <div class="form-group">
+      <label for="docsFolderId">ドキュメント保存先フォルダID</label>
+      <input type="text" id="docsFolderId" placeholder="例: 1a2b3c4d5e6f7g8h9i0j">
+      <div class="help-text">
+        作成したドキュメントを保存するGoogle DriveフォルダのIDを入力してください。<br>
+        空欄の場合はマイドライブに保存されます。<br>
+        フォルダIDはフォルダのURLから取得できます: https://drive.google.com/drive/folders/<strong>フォルダID</strong>
+      </div>
+    </div>
+
+    <div class="checkbox-group">
+      <input type="checkbox" id="domainRestriction">
+      <label for="domainRestriction" style="display: inline;">ドメイン制限を有効にする</label>
+    </div>
+  </div>
+
+  <!-- OpenAI設定タブ -->
+  <div id="openai-tab" class="tab-content">
+    <h3>OpenAI API設定</h3>
+
+    <div class="api-key-section">
+      <div class="checkbox-group">
+        <input type="checkbox" id="useOpenAI" onchange="toggleOpenAISettings()">
+        <label for="useOpenAI" style="display: inline;">
+          OpenAI APIを使用する
+          <span id="openaiStatus" class="status-indicator status-inactive"></span>
+        </label>
+      </div>
+
+      <div id="openaiSettings" style="display: none;">
+        <div class="warning">
+          ⚠️ APIキーは安全に保管してください。第三者と共有しないでください。
+        </div>
+
+        <div class="form-group">
+          <label for="openaiApiKey">OpenAI APIキー</label>
+          <input type="password" id="openaiApiKey" placeholder="sk-...">
+          <div class="help-text">
+            <a href="https://platform.openai.com/api-keys" target="_blank">APIキーの取得はこちら</a>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="openaiModel">使用モデル</label>
+          <select id="openaiModel" disabled>
+            <option value="gpt-5" selected>GPT-5（固定）</option>
+          </select>
+          <div class="help-text">このシステムはGPT-5のみを使用します</div>
+        </div>
+
+        <div class="form-group">
+          <label for="aiPrompt">カスタムプロンプト（任意）</label>
+          <textarea id="aiPrompt" placeholder="追加の指示を入力（例：特定の業界用語を使用する、など）"></textarea>
+          <div class="help-text">議案整形時の追加指示を設定できます</div>
+        </div>
+
+        <button type="button" class="btn-secondary" onclick="testOpenAI()">接続テスト</button>
+      </div>
+    </div>
+
+    <div id="testResult" style="margin-top: 15px;"></div>
+  </div>
+
+  <!-- 通知設定タブ -->
+  <div id="notification-tab" class="tab-content">
+    <h3>通知設定</h3>
+
+    <div class="form-group">
+      <label for="reminderInterval">リマインド間隔（時間）</label>
+      <input type="number" id="reminderInterval" min="1" max="168" value="24">
+      <div class="help-text">未承認者への再通知間隔</div>
+    </div>
+
+    <div class="form-group">
+      <label for="warningHours">期限前警告（時間）</label>
+      <input type="number" id="warningHours" min="1" max="72" value="24">
+      <div class="help-text">承認期限の何時間前に警告を送信するか</div>
+    </div>
+
+    <div class="checkbox-group">
+      <input type="checkbox" id="notifyAllOnComplete">
+      <label for="notifyAllOnComplete" style="display: inline;">承認完了時に全承認者に通知する</label>
+    </div>
+  </div>
+
+  <!-- テンプレート設定タブ -->
+  <div id="templates-tab" class="tab-content">
+    <h3>ドキュメントテンプレート設定</h3>
+
+    <div class="warning">
+      テンプレートドキュメントには以下のプレースホルダーを含めてください：<br>
+      {{MEETING_TYPE}}, {{MEETING_DATE}}, {{LOCATION}}, {{CHAIR}}, {{ATTENDEES}}, {{ABSENTEES}}, {{MOTIONS_BLOCK}}, {{APPROVALS_TABLE}}
+    </div>
+
+    <div id="templatesList" class="template-list">
+      <!-- テンプレートリストが動的に生成される -->
+    </div>
+
+    <button type="button" class="btn-secondary" onclick="addTemplateRow()">テンプレート追加</button>
+  </div>
+
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>処理中...</p>
+  </div>
+
+  <div id="messageArea"></div>
+
+  <div class="button-group">
+    <button class="btn-primary" onclick="saveSettings()">保存</button>
+    <button class="btn-danger" onclick="google.script.host.close()">キャンセル</button>
+  </div>
+
+  <script>
+    let settings = {};
+
+    // ページ読み込み時に設定を取得
+    window.onload = function() {
+      loadSettings();
+      loadTemplates();
+    };
+
+    function loadSettings() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          settings = result;
+
+          // 一般設定
+          document.getElementById('fromName').value = settings.FROM_NAME || '';
+          document.getElementById('replyTo').value = settings.REPLY_TO || '';
+          document.getElementById('defaultDeadline').value = settings.DEFAULT_DEADLINE_DAYS || '7';
+          document.getElementById('docsFolderId').value = settings.DOCS_FOLDER_ID || '';
+          document.getElementById('domainRestriction').checked = settings.DOMAIN_RESTRICTION === 'true';
+
+          // OpenAI設定
+          document.getElementById('useOpenAI').checked = settings.USE_OPENAI === 'true';
+          document.getElementById('openaiApiKey').value = settings.OPENAI_API_KEY || '';
+          // モデルは固定でGPT-5を使用
+          document.getElementById('openaiModel').value = 'gpt-5';
+          document.getElementById('aiPrompt').value = settings.AI_PROMPT || '';
+
+          // 通知設定
+          document.getElementById('reminderInterval').value = settings.REMINDER_INTERVAL_HOURS || '24';
+          document.getElementById('warningHours').value = settings.WARNING_HOURS || '24';
+          document.getElementById('notifyAllOnComplete').checked = settings.NOTIFY_ALL_ON_COMPLETE === 'true';
+
+          toggleOpenAISettings();
+        })
+        .withFailureHandler(showError)
+        .getAllSettings();
+    }
+
+    function loadTemplates() {
+      google.script.run
+        .withSuccessHandler(function(templates) {
+          const container = document.getElementById('templatesList');
+          container.innerHTML = '';
+
+          templates.forEach(template => {
+            const item = document.createElement('div');
+            item.className = 'template-item';
+            item.innerHTML = `
+              <span>${template.type}</span>
+              <input type="text" value="${template.docId}" placeholder="ドキュメントID" data-type="${template.type}">
+            `;
+            container.appendChild(item);
+          });
+        })
+        .withFailureHandler(showError)
+        .getTemplateSettings();
+    }
+
+    function switchTab(tabName) {
+      // タブの切り替え
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      event.target.classList.add('active');
+      document.getElementById(tabName + '-tab').classList.add('active');
+    }
+
+    function toggleOpenAISettings() {
+      const checkbox = document.getElementById('useOpenAI');
+      const settings = document.getElementById('openaiSettings');
+      const status = document.getElementById('openaiStatus');
+
+      if (checkbox.checked) {
+        settings.style.display = 'block';
+        status.classList.remove('status-inactive');
+        status.classList.add('status-active');
+      } else {
+        settings.style.display = 'none';
+        status.classList.remove('status-active');
+        status.classList.add('status-inactive');
+      }
+    }
+
+    function testOpenAI() {
+      const apiKey = document.getElementById('openaiApiKey').value;
+      const model = 'gpt-5'; // 固定
+
+      if (!apiKey) {
+        showMessage('APIキーを入力してください', 'error');
+        return;
+      }
+
+      showLoading(true);
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showMessage('接続成功！OpenAI APIが正常に動作しています。', 'success');
+          } else {
+            showMessage('接続失敗: ' + result.error, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showMessage('エラー: ' + error.toString(), 'error');
+        })
+        .testOpenAIConnection(apiKey, model);
+    }
+
+    function saveSettings() {
+      const newSettings = {
+        // 一般設定
+        FROM_NAME: document.getElementById('fromName').value,
+        REPLY_TO: document.getElementById('replyTo').value,
+        DEFAULT_DEADLINE_DAYS: document.getElementById('defaultDeadline').value,
+        DOCS_FOLDER_ID: document.getElementById('docsFolderId').value,
+        DOMAIN_RESTRICTION: document.getElementById('domainRestriction').checked ? 'true' : 'false',
+
+        // OpenAI設定（モデルは固定）
+        USE_OPENAI: document.getElementById('useOpenAI').checked ? 'true' : 'false',
+        OPENAI_API_KEY: document.getElementById('openaiApiKey').value,
+        OPENAI_MODEL: 'gpt-5',
+        AI_PROMPT: document.getElementById('aiPrompt').value,
+
+        // 通知設定
+        REMINDER_INTERVAL_HOURS: document.getElementById('reminderInterval').value,
+        WARNING_HOURS: document.getElementById('warningHours').value,
+        NOTIFY_ALL_ON_COMPLETE: document.getElementById('notifyAllOnComplete').checked ? 'true' : 'false'
+      };
+
+      // テンプレート設定の収集
+      const templates = [];
+      document.querySelectorAll('.template-item input').forEach(input => {
+        const type = input.getAttribute('data-type');
+        const docId = input.value;
+        if (type && docId) {
+          templates.push({ type: type, docId: docId });
+        }
+      });
+
+      showLoading(true);
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showMessage('設定を保存しました', 'success');
+            setTimeout(() => {
+              google.script.host.close();
+            }, 2000);
+          } else {
+            showMessage('保存エラー: ' + result.error, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showMessage('エラー: ' + error.toString(), 'error');
+        })
+        .saveSettings(newSettings, templates);
+    }
+
+    function addTemplateRow() {
+      const container = document.getElementById('templatesList');
+      const item = document.createElement('div');
+      item.className = 'template-item';
+      item.innerHTML = `
+        <input type="text" placeholder="会議種別（例：取締役会）" style="width: 35%;">
+        <input type="text" placeholder="テンプレートドキュメントID" style="width: 55%;">
+      `;
+      container.appendChild(item);
+    }
+
+    function showLoading(show) {
+      document.querySelector('.loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showMessage(message, type) {
+      const messageArea = document.getElementById('messageArea');
+      messageArea.className = type === 'success' ? 'success' : 'warning';
+      messageArea.textContent = message;
+      messageArea.style.display = 'block';
+
+      setTimeout(() => {
+        messageArea.style.display = 'none';
+      }, 5000);
+    }
+
+    function showError(error) {
+      showMessage('エラー: ' + error.toString(), 'error');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .message {
+      margin: 20px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+  <h2>テンプレート機能テスト</h2>
+
+  <div>
+    <h3>1. 基本的なJavaScriptテスト</h3>
+    <button onclick="testJS()">JavaScriptテスト</button>
+    <div id="jsResult"></div>
+  </div>
+
+  <div>
+    <h3>2. Google Apps Script通信テスト</h3>
+    <button onclick="testGAS()">GAS通信テスト</button>
+    <div id="gasResult"></div>
+  </div>
+
+  <div>
+    <h3>3. シンプルなテンプレート作成</h3>
+    <input type="text" id="templateType" placeholder="会議種別" value="テスト会議">
+    <br>
+    <textarea id="templateContent" rows="5" style="width: 100%; margin: 10px 0;">
+テストテンプレート
+{{MEETING_TYPE}}
+{{MEETING_DATE}}
+    </textarea>
+    <br>
+    <button onclick="createSimpleTemplate()">テンプレート作成</button>
+    <div id="templateResult"></div>
+  </div>
+
+  <div>
+    <h3>4. サンプルテンプレート作成</h3>
+    <button onclick="createSamples()">サンプル作成</button>
+    <div id="sampleResult"></div>
+  </div>
+
+  <script>
+    // 1. 基本的なJavaScriptテスト
+    function testJS() {
+      console.log('testJS called');
+      document.getElementById('jsResult').innerHTML =
+        '<div class="message success">✓ JavaScript動作確認OK - ' + new Date().toLocaleTimeString() + '</div>';
+    }
+
+    // 2. GAS通信テスト
+    function testGAS() {
+      console.log('testGAS called');
+      document.getElementById('gasResult').innerHTML =
+        '<div class="message">通信中...</div>';
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            console.log('GAS success:', result);
+            document.getElementById('gasResult').innerHTML =
+              '<div class="message success">✓ GAS通信成功<br>' +
+              'テンプレート数: ' + (result ? result.length : 0) + '</div>';
+          })
+          .withFailureHandler(function(error) {
+            console.error('GAS error:', error);
+            document.getElementById('gasResult').innerHTML =
+              '<div class="message error">✗ GAS通信エラー<br>' + error + '</div>';
+          })
+          .getTemplateList();
+      } catch (e) {
+        console.error('Exception:', e);
+        document.getElementById('gasResult').innerHTML =
+          '<div class="message error">✗ 例外エラー<br>' + e.message + '</div>';
+      }
+    }
+
+    // 3. シンプルなテンプレート作成
+    function createSimpleTemplate() {
+      console.log('createSimpleTemplate called');
+
+      const type = document.getElementById('templateType').value;
+      const content = document.getElementById('templateContent').value;
+
+      console.log('Type:', type);
+      console.log('Content:', content);
+
+      if (!type || !content) {
+        document.getElementById('templateResult').innerHTML =
+          '<div class="message error">✗ 入力してください</div>';
+        return;
+      }
+
+      document.getElementById('templateResult').innerHTML =
+        '<div class="message">作成中...</div>';
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            console.log('Create success:', result);
+            if (result && result.success) {
+              document.getElementById('templateResult').innerHTML =
+                '<div class="message success">✓ 作成成功<br>' +
+                'Type: ' + result.type + '<br>' +
+                'Doc ID: ' + result.docId + '</div>';
+            } else {
+              document.getElementById('templateResult').innerHTML =
+                '<div class="message error">✗ 作成失敗<br>' +
+                (result ? result.error : 'Unknown error') + '</div>';
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.error('Create error:', error);
+            document.getElementById('templateResult').innerHTML =
+              '<div class="message error">✗ 作成エラー<br>' + error + '</div>';
+          })
+          .createTemplateDocument({
+            type: type,
+            content: content
+          });
+      } catch (e) {
+        console.error('Exception:', e);
+        document.getElementById('templateResult').innerHTML =
+          '<div class="message error">✗ 例外エラー<br>' + e.message + '</div>';
+      }
+    }
+
+    // 4. サンプルテンプレート作成
+    function createSamples() {
+      console.log('createSamples called');
+      document.getElementById('sampleResult').innerHTML =
+        '<div class="message">作成中...</div>';
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            console.log('Samples success:', result);
+            if (result && result.success) {
+              document.getElementById('sampleResult').innerHTML =
+                '<div class="message success">✓ サンプル作成成功<br>' +
+                result.message + '</div>';
+            } else {
+              document.getElementById('sampleResult').innerHTML =
+                '<div class="message error">✗ サンプル作成失敗<br>' +
+                (result ? result.error : 'Unknown error') + '</div>';
+            }
+          })
+          .withFailureHandler(function(error) {
+            console.error('Samples error:', error);
+            document.getElementById('sampleResult').innerHTML =
+              '<div class="message error">✗ サンプル作成エラー<br>' + error + '</div>';
+          })
+          .createSampleTemplates();
+      } catch (e) {
+        console.error('Exception:', e);
+        document.getElementById('sampleResult').innerHTML =
+          '<div class="message error">✗ 例外エラー<br>' + e.message + '</div>';
+      }
+    }
+
+    // ページ読み込み時のテスト
+    window.onload = function() {
+      console.log('Page loaded at:', new Date().toLocaleTimeString());
+      console.log('google object:', typeof google);
+      console.log('google.script:', typeof google !== 'undefined' ? typeof google.script : 'N/A');
+      console.log('google.script.run:', typeof google !== 'undefined' && google.script ? typeof google.script.run : 'N/A');
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="date"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .button-group {
+      margin-top: 20px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .btn-secondary {
+      background-color: #f44336;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #da190b;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4CAF50;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid red;
+      border-radius: 4px;
+      background-color: #ffebee;
+      display: none;
+    }
+    .success-message {
+      color: green;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid green;
+      border-radius: 4px;
+      background-color: #e8f5e9;
+      display: none;
+    }
+    .required {
+      color: red;
+    }
+    .email-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 5px;
+    }
+    .email-tag {
+      background-color: #e0e0e0;
+      padding: 5px 10px;
+      border-radius: 15px;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .email-tag .remove {
+      margin-left: 5px;
+      cursor: pointer;
+      color: red;
+      font-weight: bold;
+    }
+    .attendee-input,
+    .absentee-input {
+      display: flex;
+      gap: 5px; /* 間隔を統一 */
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .attendee-input > *,
+    .absentee-input > * {
+      margin: 0; /* 全ての子要素のmarginを0に */
+    }
+    .attendee-input select,
+    .absentee-input select {
+      flex: 0 0 200px; /* 固定幅 */
+    }
+    .attendee-input .name-input,
+    .absentee-input .name-input {
+      flex: 0 0 150px; /* 名前欄の固定幅 */
+    }
+    .attendee-input .position-input,
+    .absentee-input .position-input {
+      flex: 1; /* 役職欄は可変幅 */
+      min-width: 150px;
+    }
+    .attendee-input button,
+    .absentee-input button {
+      flex: 0 0 30px; /* ボタン固定幅 */
+      height: 30px;
+    }
+    .attendee-input input,
+    .absentee-input input {
+      flex: 1;
+    }
+    .name-input {
+      max-width: 200px;
+    }
+    .position-input {
+      max-width: 250px;
+    }
+    .attendee-input button,
+    .absentee-input button {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      font-size: 18px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .remove-btn {
+      background-color: #f44336 !important;
+    }
+    #attendeesContainer,
+    #absenteesContainer {
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 5px;
+      border: 1px solid #eee;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h2>新規ドラフト作成</h2>
+
+  <div class="form-group">
+    <label for="meetingType">会議種別 <span class="required">*</span></label>
+    <select id="meetingType" required>
+      <option value="">選択してください</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="meetingDate">会議日 <span class="required">*</span></label>
+    <input type="datetime-local" id="meetingDate" required>
+  </div>
+
+  <div class="form-group">
+    <label for="title">タイトル <span class="required">*</span></label>
+    <input type="text" id="title" placeholder="例: 第○回定例会議" required>
+  </div>
+
+  <div class="form-group">
+    <label for="location">開催場所</label>
+    <input type="text" id="location" placeholder="例: 本社会議室">
+  </div>
+
+  <div class="form-group">
+    <label for="chair">議長</label>
+    <div style="display: flex; gap: 10px;">
+      <select id="chairSelect" onchange="selectChair(this)" style="flex: 1;">
+        <option value="">役員リストから選択</option>
+      </select>
+      <input type="text" id="chair" placeholder="または直接入力" style="flex: 1;">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label for="attendees">出席役員</label>
+    <div id="attendeesContainer">
+      <!-- 初期状態は空 -->
+    </div>
+    <button type="button" onclick="addAttendeeField()" class="btn-primary" style="margin-top: 10px;">＋ 出席者を追加</button>
+    <small style="display: block; margin-top: 5px;">役員リストから選択するか、直接入力してください</small>
+  </div>
+
+  <div class="form-group">
+    <label for="absentees">欠席役員</label>
+    <div id="absenteesContainer">
+      <!-- 初期状態は空 -->
+    </div>
+    <button type="button" onclick="addAbsenteeField()" class="btn-primary" style="margin-top: 10px;">＋ 欠席者を追加</button>
+    <small style="display: block; margin-top: 5px;">役員リストから選択するか、直接入力してください</small>
+  </div>
+
+  <div class="form-group">
+    <label for="approverEmail">承認者メールアドレス</label>
+    <input type="email" id="approverEmail" placeholder="example@domain.com">
+    <button type="button" onclick="addApprover()">追加</button>
+    <div id="approversList" class="email-list"></div>
+  </div>
+
+  <div class="form-group">
+    <label for="deadline">承認期限</label>
+    <input type="date" id="deadline">
+  </div>
+
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>処理中...</p>
+  </div>
+
+  <div id="errorMessage" class="error-message"></div>
+  <div id="successMessage" class="success-message"></div>
+
+  <div class="button-group">
+    <button class="btn-primary" onclick="createDraft()">作成</button>
+    <button class="btn-secondary" onclick="google.script.host.close()">キャンセル</button>
+  </div>
+
+  <script>
+    let approvers = [];
+    let officersList = [];
+
+    // ページ読み込み時に会議種別と役員リストを取得
+    window.onload = function() {
+      // 会議種別を取得
+      google.script.run
+        .withSuccessHandler(loadMeetingTypes)
+        .withFailureHandler(showError)
+        .getMeetingTypes();
+
+      // 役員リストを取得
+      console.log('役員リスト取得開始...');
+      google.script.run
+        .withSuccessHandler(function(officers) {
+          console.log('役員リスト取得成功');
+          loadOfficersList(officers);
+          // 議長選択ドロップダウンにも追加
+          loadChairList(officers);
+        })
+        .withFailureHandler(function(error) {
+          console.error('役員リスト取得失敗:', error);
+          showError('役員リストの取得に失敗しました: ' + error);
+        })
+        .getOfficersList();
+
+      // デフォルトの期限を7日後に設定
+      const deadline = new Date();
+      deadline.setDate(deadline.getDate() + 7);
+      document.getElementById('deadline').value = deadline.toISOString().split('T')[0];
+    };
+
+    function loadMeetingTypes(types) {
+      const select = document.getElementById('meetingType');
+      types.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        select.appendChild(option);
+      });
+    }
+
+    function loadOfficersList(officers) {
+      console.log('loadOfficersList呼び出し:', officers);
+
+      if (!officers) {
+        console.error('役員リストがnullまたはundefined');
+        // 空の配列として処理を継続
+        officers = [];
+      }
+
+      if (!Array.isArray(officers)) {
+        console.error('役員リストが配列ではありません:', typeof officers);
+        return;
+      }
+
+      officersList = officers;
+      console.log('役員リスト読み込み完了:', officers.length + '名');
+
+      if (officers.length > 0) {
+        console.log('最初の役員データ:', officers[0]);
+      } else {
+        console.log('役員データが空です。シート初期化を確認してください。');
+      }
+
+      // 少し遅延させてDOMの準備を確実に
+      setTimeout(function() {
+        // 全ての役員選択ドロップダウンに役員リストを追加
+        updateAllOfficerSelects();
+
+        // 初期化完了をログ
+        console.log('役員選択ドロップダウンの初期化完了');
+      }, 100);
+    }
+
+    // 役員選択時の処理（出席者）
+    function selectOfficerForAttendee(selectElement) {
+      console.log('出席者選択:', selectElement.value);
+
+      if (selectElement.value) {
+        // データ属性から直接値を取得
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const name = selectedOption.getAttribute('data-name');
+        const position = selectedOption.getAttribute('data-position');
+
+        console.log('選択された役員:', name, position);
+
+        const container = selectElement.parentElement;
+        const nameInput = container.querySelector('.name-input');
+        const positionInput = container.querySelector('.position-input');
+
+        if (nameInput && positionInput) {
+          nameInput.value = name || '';
+          positionInput.value = position || '';
+          console.log('入力フィールド更新完了:', name, position);
+        } else {
+          console.error('入力フィールドが見つかりません');
+        }
+      }
+    }
+
+    // 役員選択時の処理（欠席者）
+    function selectOfficerForAbsentee(selectElement) {
+      console.log('欠席者選択:', selectElement.value);
+
+      if (selectElement.value) {
+        // データ属性から直接値を取得
+        const selectedOption = selectElement.options[selectElement.selectedIndex];
+        const name = selectedOption.getAttribute('data-name');
+        const position = selectedOption.getAttribute('data-position');
+
+        console.log('選択された役員:', name, position);
+
+        const container = selectElement.parentElement;
+        const nameInput = container.querySelector('.name-input');
+        const positionInput = container.querySelector('.position-input');
+
+        if (nameInput && positionInput) {
+          nameInput.value = name || '';
+          positionInput.value = position || '';
+          console.log('入力フィールド更新完了:', name, position);
+        } else {
+          console.error('入力フィールドが見つかりません');
+        }
+      }
+    }
+
+    // 議長選択用のドロップダウンを読み込み
+    function loadChairList(officers) {
+      const chairSelect = document.getElementById('chairSelect');
+      if (!chairSelect) return;
+
+      // 既存のオプションをクリア（デフォルト選択肢以外）
+      while (chairSelect.options.length > 1) {
+        chairSelect.remove(1);
+      }
+
+      // 役員リストを追加
+      officers.forEach(officer => {
+        const option = document.createElement('option');
+        option.value = officer.name;
+        option.textContent = officer.position ? `${officer.name} ${officer.position}` : officer.name;
+        chairSelect.appendChild(option);
+      });
+    }
+
+    // 議長選択時の処理
+    function selectChair(selectElement) {
+      const chairInput = document.getElementById('chair');
+      if (selectElement.value && chairInput) {
+        chairInput.value = selectElement.value;
+        selectElement.selectedIndex = 0; // リセット
+      }
+    }
+
+    // 全ての役員選択ドロップダウンを更新
+    function updateAllOfficerSelects() {
+      console.log('updateAllOfficerSelects開始');
+      const selects = document.querySelectorAll('.officer-select');
+      console.log('セレクト要素数:', selects.length);
+
+      selects.forEach((select, index) => {
+        console.log(`セレクト${index + 1}のオプション数:`, select.options.length);
+
+        // 既存のオプションをクリア（デフォルト選択肢以外）
+        while (select.options.length > 1) {
+          select.remove(1);
+        }
+
+        // 役員リストを追加
+        officersList.forEach((officer, idx) => {
+          const option = document.createElement('option');
+          option.value = `officer_${idx}`; // シンプルな識別子
+          option.setAttribute('data-name', officer.name || '');
+          option.setAttribute('data-position', officer.position || '');
+          option.textContent = officer.position ? `${officer.name} ${officer.position}` : officer.name;
+          select.appendChild(option);
+        });
+
+        console.log(`セレクト${index + 1}の更新後オプション数:`, select.options.length);
+      });
+    }
+
+
+    function addApprover() {
+      const emailInput = document.getElementById('approverEmail');
+      const email = emailInput.value.trim();
+
+      if (!email) {
+        return;
+      }
+
+      if (!validateEmail(email)) {
+        showError('正しいメールアドレスを入力してください');
+        return;
+      }
+
+      if (approvers.includes(email)) {
+        showError('既に追加されています');
+        return;
+      }
+
+      approvers.push(email);
+      emailInput.value = '';
+      updateApproversList();
+    }
+
+    function removeApprover(email) {
+      approvers = approvers.filter(e => e !== email);
+      updateApproversList();
+    }
+
+    function updateApproversList() {
+      const list = document.getElementById('approversList');
+      list.innerHTML = '';
+
+      approvers.forEach(email => {
+        const tag = document.createElement('div');
+        tag.className = 'email-tag';
+        tag.innerHTML = `
+          ${email}
+          <span class="remove" onclick="removeApprover('${email}')">×</span>
+        `;
+        list.appendChild(tag);
+      });
+    }
+
+    function validateEmail(email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
+    }
+
+    // 出席者フィールドを追加
+    function addAttendeeField() {
+      const container = document.getElementById('attendeesContainer');
+      const div = document.createElement('div');
+      div.className = 'attendee-input';
+      div.style.marginBottom = '10px';
+
+      // 役員選択ドロップダウンを作成
+      const select = document.createElement('select');
+      select.className = 'officer-select';
+      select.style.marginRight = '10px';
+      select.onchange = function() { selectOfficerForAttendee(this); };
+
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = '役員リストから選択';
+      select.appendChild(defaultOption);
+
+      if (officersList && officersList.length > 0) {
+        officersList.forEach((officer, idx) => {
+          const option = document.createElement('option');
+          option.value = `officer_${idx}`; // シンプルな識別子
+          option.setAttribute('data-name', officer.name || '');
+          option.setAttribute('data-position', officer.position || '');
+          option.textContent = officer.position ? `${officer.name} ${officer.position}` : officer.name;
+          select.appendChild(option);
+        });
+      }
+
+      // 役員選択ドロップダウン
+      div.appendChild(select);
+
+      // 名前入力欄
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'name-input';
+      nameInput.placeholder = '氏名';
+      div.appendChild(nameInput);
+
+      // 役職入力欄
+      const positionInput = document.createElement('input');
+      positionInput.type = 'text';
+      positionInput.className = 'position-input';
+      positionInput.placeholder = '役職';
+      div.appendChild(positionInput);
+
+      // 削除ボタン
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '－';
+      removeBtn.onclick = function() { removeField(this); };
+      div.appendChild(removeBtn);
+
+      container.appendChild(div);
+    }
+
+    // 欠席者フィールドを追加
+    function addAbsenteeField() {
+      const container = document.getElementById('absenteesContainer');
+      const div = document.createElement('div');
+      div.className = 'absentee-input';
+      div.style.marginBottom = '10px';
+
+      // 役員選択ドロップダウンを作成
+      const select = document.createElement('select');
+      select.className = 'officer-select';
+      select.style.marginRight = '10px';
+      select.onchange = function() { selectOfficerForAbsentee(this); };
+
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = '役員リストから選択';
+      select.appendChild(defaultOption);
+
+      if (officersList && officersList.length > 0) {
+        officersList.forEach((officer, idx) => {
+          const option = document.createElement('option');
+          option.value = `officer_${idx}`; // シンプルな識別子
+          option.setAttribute('data-name', officer.name || '');
+          option.setAttribute('data-position', officer.position || '');
+          option.textContent = officer.position ? `${officer.name} ${officer.position}` : officer.name;
+          select.appendChild(option);
+        });
+      }
+
+      // 役員選択ドロップダウン
+      div.appendChild(select);
+
+      // 名前入力欄
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'name-input';
+      nameInput.placeholder = '氏名';
+      div.appendChild(nameInput);
+
+      // 役職入力欄
+      const positionInput = document.createElement('input');
+      positionInput.type = 'text';
+      positionInput.className = 'position-input';
+      positionInput.placeholder = '役職';
+      div.appendChild(positionInput);
+
+      // 削除ボタン
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '－';
+      removeBtn.onclick = function() { removeField(this); };
+      div.appendChild(removeBtn);
+
+      container.appendChild(div);
+    }
+
+    // フィールドを削除
+    function removeField(button) {
+      button.parentElement.remove();
+    }
+
+    // 出席者情報を収集
+    function collectAttendees() {
+      const container = document.getElementById('attendeesContainer');
+      const inputs = container.querySelectorAll('.attendee-input');
+      const attendees = [];
+
+      inputs.forEach(input => {
+        const name = input.querySelector('.name-input').value.trim();
+        const position = input.querySelector('.position-input').value.trim();
+        if (name) {
+          attendees.push({
+            name: name,
+            position: position || ''
+          });
+        }
+      });
+
+      return attendees;
+    }
+
+    // 欠席者情報を収集
+    function collectAbsentees() {
+      const container = document.getElementById('absenteesContainer');
+      const inputs = container.querySelectorAll('.absentee-input');
+      const absentees = [];
+
+      inputs.forEach(input => {
+        const name = input.querySelector('.name-input').value.trim();
+        const position = input.querySelector('.position-input').value.trim();
+        if (name) {
+          absentees.push({
+            name: name,
+            position: position || ''
+          });
+        }
+      });
+
+      return absentees;
+    }
+
+    function createDraft() {
+      // バリデーション
+      const meetingType = document.getElementById('meetingType').value;
+      const meetingDate = document.getElementById('meetingDate').value;
+      const title = document.getElementById('title').value;
+
+      if (!meetingType || !meetingDate || !title) {
+        showError('必須項目を入力してください');
+        return;
+      }
+
+      // 出席者と欠席者を収集
+      const attendees = collectAttendees();
+      const absentees = collectAbsentees();
+
+      const params = {
+        meetingType: meetingType,
+        meetingDate: meetingDate,
+        title: title,
+        location: document.getElementById('location').value,
+        chair: document.getElementById('chair').value,
+        attendees: attendees,
+        absentees: absentees,
+        approvers: approvers,
+        deadline: document.getElementById('deadline').value
+      };
+
+      // ローディング表示
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(onCreateSuccess)
+        .withFailureHandler(onCreateError)
+        .createDraft(params);
+    }
+
+    function onCreateSuccess(result) {
+      showLoading(false);
+
+      if (result.success) {
+        showSuccess(`ドラフトを作成しました。\nドキュメントID: ${result.docId}`);
+
+        // 3秒後にダイアログを閉じる
+        setTimeout(() => {
+          google.script.host.close();
+        }, 3000);
+      } else {
+        showError(result.error);
+      }
+    }
+
+    function onCreateError(error) {
+      showLoading(false);
+      showError('エラーが発生しました: ' + error.toString());
+    }
+
+    function showLoading(show) {
+      document.querySelector('.loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

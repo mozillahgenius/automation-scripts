@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Background -->
+  <rect width="128" height="128" rx="24" fill="#4285f4"/>
+
+  <!-- Clipboard base -->
+  <rect x="28" y="32" width="72" height="80" rx="6" fill="#fff"/>
+
+  <!-- Clipboard clip -->
+  <rect x="46" y="24" width="36" height="16" rx="4" fill="#fff"/>
+  <rect x="50" y="28" width="28" height="8" rx="2" fill="#4285f4"/>
+
+  <!-- Text lines (representing multiple clipboard items) -->
+  <rect x="40" y="52" width="48" height="6" rx="2" fill="#34a853"/>
+  <rect x="40" y="66" width="42" height="6" rx="2" fill="#fbbc04"/>
+  <rect x="40" y="80" width="38" height="6" rx="2" fill="#ea4335"/>
+</svg>

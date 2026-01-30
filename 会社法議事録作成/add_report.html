@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #2196F3;
+      padding-bottom: 10px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    small {
+      color: #666;
+      font-size: 12px;
+      display: block;
+      margin-top: 3px;
+    }
+    select {
+      cursor: pointer;
+    }
+    .editor-container {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      min-height: 200px;
+      padding: 10px;
+      background-color: white;
+    }
+    .editor-toolbar {
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      margin: -10px -10px 10px -10px;
+    }
+    .editor-toolbar button {
+      padding: 5px 10px;
+      margin-right: 5px;
+      background-color: white;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .editor-toolbar button:hover {
+      background-color: #f0f0f0;
+    }
+    #htmlInput {
+      min-height: 150px;
+      font-family: monospace;
+    }
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: auto;
+      margin-right: 10px;
+    }
+    .preview-container {
+      border: 1px solid #2196F3;
+      border-radius: 4px;
+      padding: 15px;
+      margin-top: 20px;
+      background-color: #f9f9f9;
+      display: none;
+    }
+    .preview-header {
+      font-weight: bold;
+      color: #2196F3;
+      margin-bottom: 10px;
+    }
+    .preview-content {
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .button-group {
+      margin-top: 20px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #0b7dda;
+    }
+    .btn-secondary {
+      background-color: #9E9E9E;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #757575;
+    }
+    .btn-cancel {
+      background-color: #f44336;
+      color: white;
+    }
+    .btn-cancel:hover {
+      background-color: #da190b;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #2196F3;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid red;
+      border-radius: 4px;
+      background-color: #ffebee;
+      display: none;
+    }
+    .success-message {
+      color: green;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid green;
+      border-radius: 4px;
+      background-color: #e8f5e9;
+      display: none;
+    }
+    .required {
+      color: red;
+    }
+    .info-box {
+      background-color: #e3f2fd;
+      border: 1px solid #2196F3;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 20px;
+    }
+    .info-box h4 {
+      margin-top: 0;
+      color: #1976D2;
+    }
+  </style>
+</head>
+<body>
+  <h2>📢 報告事項追加</h2>
+
+  <div class="info-box">
+    <h4>報告事項について</h4>
+    <p>報告事項は決議を必要としない情報共有事項です。業務報告、進捗状況、市場動向などを記録します。</p>
+  </div>
+
+  <div class="form-group">
+    <label for="docSelect">対象ドキュメント <span class="required">*</span></label>
+    <select id="docSelect" required onchange="loadReports()">
+      <option value="">選択してください</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="reportNumber">報告事項番号 <span class="required">*</span></label>
+    <input type="number" id="reportNumber" min="1" placeholder="例: 1" required>
+    <small>報告事項の通し番号（1, 2, 3...）</small>
+  </div>
+
+  <div class="form-group">
+    <label for="reportTitle">報告事項タイトル <span class="required">*</span></label>
+    <input type="text" id="reportTitle" placeholder="例: 第2四半期業績報告" required>
+  </div>
+
+  <div class="form-group">
+    <label for="htmlInput">報告内容 <span class="required">*</span></label>
+    <div class="editor-container">
+      <div class="editor-toolbar">
+        <button type="button" onclick="insertTag('h3'); return false;">見出し</button>
+        <button type="button" onclick="insertTag('b'); return false;">太字</button>
+        <button type="button" onclick="insertTag('ul'); return false;">箇条書き</button>
+        <button type="button" onclick="insertTag('ol'); return false;">番号付きリスト</button>
+        <button type="button" onclick="insertLineBreak(); return false;">改行</button>
+      </div>
+      <textarea id="htmlInput" placeholder="報告の詳細内容を入力してください"></textarea>
+    </div>
+    <small>必要に応じて上部のボタンで書式設定ができます</small>
+  </div>
+
+  <div class="form-group">
+    <label for="presenter">報告者</label>
+    <select id="presenterSelect" onchange="onPresenterSelected()">
+      <option value="">役員リストから選択</option>
+    </select>
+    <input type="text" id="presenter" placeholder="または直接入力: 例: 山田太郎 代表取締役" style="margin-top: 10px;">
+    <small>役員リストから選択するか、直接入力してください</small>
+  </div>
+
+  <div class="checkbox-group">
+    <input type="checkbox" id="useAI" checked>
+    <label for="useAI" style="display: inline; font-weight: normal;">AI整形を使用する（報告事項用フォーマット）</label>
+  </div>
+
+  <div class="preview-container" id="previewContainer">
+    <div class="preview-header">プレビュー（AI整形後）</div>
+    <div class="preview-content" id="previewContent"></div>
+  </div>
+
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>処理中...</p>
+  </div>
+
+  <div id="errorMessage" class="error-message"></div>
+  <div id="successMessage" class="success-message"></div>
+
+  <div class="button-group">
+    <button type="button" class="btn-secondary" id="previewBtn">プレビュー</button>
+    <button type="button" class="btn-primary" id="addReportBtn">報告事項追加</button>
+    <button type="button" class="btn-cancel" id="cancelBtn">キャンセル</button>
+  </div>
+
+  <script>
+    let currentDocId = null;
+    let existingReports = [];
+    let officersList = [];
+
+    // ページ読み込み時にドキュメント一覧を取得
+    window.onload = function() {
+      console.log('報告事項追加ページ読み込み完了');
+
+      // 役員リストを取得
+      loadOfficers();
+
+      // ボタンにイベントリスナーを設定
+      const previewBtn = document.getElementById('previewBtn');
+      const addReportBtn = document.getElementById('addReportBtn');
+      const cancelBtn = document.getElementById('cancelBtn');
+
+      if (previewBtn) {
+        previewBtn.addEventListener('click', previewReport);
+      }
+
+      if (addReportBtn) {
+        addReportBtn.addEventListener('click', addReport);
+      }
+
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', function() {
+          google.script.host.close();
+        });
+      }
+
+      // ドキュメントリストを取得
+      const select = document.getElementById('docSelect');
+      if (!select) {
+        console.error('docSelectが見つかりません');
+        return;
+      }
+
+      google.script.run
+        .withSuccessHandler(function(docsJson) {
+          let docs;
+          try {
+            if (typeof docsJson === 'string') {
+              docs = JSON.parse(docsJson);
+            } else if (Array.isArray(docsJson)) {
+              docs = docsJson;
+            } else {
+              docs = [];
+            }
+          } catch(e) {
+            console.error('JSONパースエラー:', e);
+            select.innerHTML = '<option value="">JSONパースエラー</option>';
+            return;
+          }
+          loadDocuments(docs);
+        })
+        .withFailureHandler(function(error) {
+          console.error('getDocsList失敗:', error);
+          showError('ドキュメント一覧の取得に失敗しました: ' + error.toString());
+          select.innerHTML = '<option value="">エラー：' + error.toString() + '</option>';
+        })
+        .getDocsList();
+    };
+
+    function loadDocuments(docs) {
+      const select = document.getElementById('docSelect');
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      if (!docs || !Array.isArray(docs) || docs.length === 0) {
+        select.innerHTML = '<option value="">ドキュメントがありません</option>';
+        return;
+      }
+
+      // 編集中のドキュメントのみ表示
+      const editableDocs = docs.filter(doc =>
+        doc.status === '編集中' || doc.status === '承認待ち'
+      );
+
+      if (editableDocs.length === 0) {
+        select.innerHTML = '<option value="">編集可能なドキュメントがありません</option>';
+        return;
+      }
+
+      editableDocs.forEach(doc => {
+        const option = document.createElement('option');
+        option.value = doc.docId;
+        let dateStr = '日付なし';
+        if (doc.meetingDate) {
+          try {
+            dateStr = new Date(doc.meetingDate).toLocaleDateString('ja-JP');
+          } catch (e) {
+            dateStr = doc.meetingDate;
+          }
+        }
+        option.textContent = `${doc.title || '無題'} (${doc.meetingType || '種別不明'} - ${dateStr})`;
+        select.appendChild(option);
+      });
+    }
+
+    function loadReports() {
+      const docId = document.getElementById('docSelect').value;
+      if (!docId) {
+        return;
+      }
+
+      currentDocId = docId;
+
+      // 既存の報告事項を取得して次の番号を提案
+      google.script.run
+        .withSuccessHandler(function(motions) {
+          console.log('既存の報告事項取得成功:', motions);
+
+          // 報告事項のみをフィルタ
+          const reports = (motions || []).filter(m => m.type === '報告事項');
+          existingReports = reports;
+
+          // 最大の報告事項番号を取得
+          let maxNumber = 0;
+          if (reports.length > 0) {
+            reports.forEach(report => {
+              const num = parseInt(report.motionNumber);
+              if (num > maxNumber) {
+                maxNumber = num;
+              }
+            });
+          }
+
+          // 次の報告事項番号を提案（ユーザーが既に入力している場合は上書きしない）
+          const reportNumberInput = document.getElementById('reportNumber');
+          if (!reportNumberInput.value || reportNumberInput.value === '' || reportNumberInput.value === '0') {
+            reportNumberInput.value = maxNumber + 1;
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('報告事項リスト取得エラー:', error);
+          existingReports = [];
+        })
+        .getMotionsList(docId);
+    }
+
+    // 役員リストを読み込み
+    function loadOfficers() {
+      google.script.run
+        .withSuccessHandler(function(officers) {
+          if (officers && officers.length > 0) {
+            officersList = officers;
+            const select = document.getElementById('presenterSelect');
+            select.innerHTML = '<option value="">役員リストから選択</option>';
+
+            officers.forEach(officer => {
+              const option = document.createElement('option');
+              option.value = `${officer.name} ${officer.position}`;
+              option.textContent = `${officer.name} ${officer.position}`;
+              select.appendChild(option);
+            });
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('役員リスト取得エラー:', error);
+        })
+        .getOfficersList();
+    }
+
+    // 報告者選択時の処理
+    function onPresenterSelected() {
+      const select = document.getElementById('presenterSelect');
+      const input = document.getElementById('presenter');
+      if (select.value) {
+        input.value = '';
+      }
+    }
+
+    function insertTag(tag) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const textarea = document.getElementById('htmlInput');
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = textarea.value.substring(start, end);
+
+      let insertText = '';
+      switch (tag) {
+        case 'h3':
+          insertText = `<h3>${selectedText || '見出し'}</h3>`;
+          break;
+        case 'b':
+          insertText = `<b>${selectedText || '太字テキスト'}</b>`;
+          break;
+        case 'ul':
+          insertText = `<ul>\n  <li>${selectedText || 'リスト項目'}</li>\n</ul>`;
+          break;
+        case 'ol':
+          insertText = `<ol>\n  <li>${selectedText || '番号付き項目'}</li>\n</ol>`;
+          break;
+      }
+
+      const before = textarea.value.substring(0, start);
+      const after = textarea.value.substring(end);
+      textarea.value = before + insertText + after;
+
+      textarea.selectionStart = start + insertText.length;
+      textarea.selectionEnd = start + insertText.length;
+      textarea.focus();
+    }
+
+    function insertLineBreak() {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const textarea = document.getElementById('htmlInput');
+      const start = textarea.selectionStart;
+      const before = textarea.value.substring(0, start);
+      const after = textarea.value.substring(start);
+
+      textarea.value = before + '<br>\n' + after;
+      textarea.selectionStart = start + 5;
+      textarea.selectionEnd = start + 5;
+      textarea.focus();
+    }
+
+    function previewReport() {
+      const title = document.getElementById('reportTitle').value;
+      const htmlInput = document.getElementById('htmlInput').value;
+      const useAI = document.getElementById('useAI').checked;
+
+      if (!title || !htmlInput) {
+        showError('報告事項タイトルと内容を入力してください');
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showPreview(result.preview);
+          } else {
+            showError(result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showError('プレビューエラー: ' + error.toString());
+        })
+        .previewMotion(htmlInput, title, useAI, '報告事項');
+    }
+
+    function showPreview(content) {
+      const container = document.getElementById('previewContainer');
+      const contentDiv = document.getElementById('previewContent');
+
+      contentDiv.textContent = content;
+      container.style.display = 'block';
+    }
+
+    function addReport(event) {
+      console.log('===== addReport関数が呼び出されました =====');
+
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      const addButton = document.getElementById('addReportBtn');
+      if (addButton && addButton.disabled) {
+        return;
+      }
+      if (addButton) {
+        addButton.disabled = true;
+      }
+
+      // バリデーション
+      const docId = document.getElementById('docSelect').value;
+      const reportNumber = document.getElementById('reportNumber').value;
+      const title = document.getElementById('reportTitle').value;
+      const htmlInput = document.getElementById('htmlInput').value;
+
+      if (!docId || !reportNumber || !title || !htmlInput) {
+        showError('必須項目を入力してください');
+        if (addButton) addButton.disabled = false;
+        return;
+      }
+
+      // 報告事項番号の重複チェック
+      if (existingReports && existingReports.length > 0) {
+        const isDuplicate = existingReports.some(r =>
+          r.motionNumber && r.motionNumber.toString() === reportNumber.toString()
+        );
+
+        if (isDuplicate) {
+          showError(`報告事項番号${reportNumber}は既に使用されています`);
+          if (addButton) addButton.disabled = false;
+          return;
+        }
+      }
+
+      const presenterSelect = document.getElementById('presenterSelect').value;
+      const presenterInput = document.getElementById('presenter').value;
+      const presenter = presenterSelect || presenterInput;
+      const useAI = document.getElementById('useAI').checked;
+
+      const params = {
+        docId: docId,
+        motionNumber: reportNumber,
+        title: title,
+        inputHtml: htmlInput,
+        presenter: presenter,
+        resolutionResult: '報告事項',
+        votingDetails: '',
+        specialInterest: '',
+        conditions: '',
+        hasAttachment: false,
+        attachmentMemo: '',
+        useAI: useAI,
+        type: '報告事項'
+      };
+
+      console.log('送信パラメータ:', params);
+
+      showLoading(true);
+      hideMessages();
+
+      try {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            console.log('サーバーからの応答:', result);
+            onAddSuccess(result);
+          })
+          .withFailureHandler(function(error) {
+            console.error('サーバーエラー:', error);
+            onAddError(error);
+          })
+          .addMotion(params);
+      } catch (e) {
+        console.error('google.script.run実行中のエラー:', e);
+        showError('システムエラー: ' + e.toString());
+        if (addButton) addButton.disabled = false;
+        showLoading(false);
+      }
+    }
+
+    function onAddSuccess(result) {
+      console.log('onAddSuccess呼び出されました:', result);
+      showLoading(false);
+
+      if (result && result.success) {
+        showSuccess(result.message || '報告事項を追加しました');
+
+        // フォームをリセット
+        document.getElementById('reportNumber').value = parseInt(document.getElementById('reportNumber').value) + 1;
+        document.getElementById('reportTitle').value = '';
+        document.getElementById('htmlInput').value = '';
+        document.getElementById('presenter').value = '';
+        document.getElementById('presenterSelect').value = '';
+        document.getElementById('previewContainer').style.display = 'none';
+
+        // 報告事項リストを再読み込み
+        loadReports();
+
+        const addButton = document.getElementById('addReportBtn');
+        if (addButton) addButton.disabled = false;
+      } else {
+        showError(result ? result.error : '不明なエラー');
+        const addButton = document.getElementById('addReportBtn');
+        if (addButton) addButton.disabled = false;
+      }
+    }
+
+    function onAddError(error) {
+      console.error('onAddError呼び出されました:', error);
+      showLoading(false);
+      showError('エラーが発生しました: ' + error.toString());
+      const addButton = document.getElementById('addReportBtn');
+      if (addButton) addButton.disabled = false;
+    }
+
+    function showLoading(show) {
+      document.querySelector('.loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

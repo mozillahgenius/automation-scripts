@@ -1,0 +1,31 @@
+=QUERY(
+    {
+      FILTER(
+        ARRAYFORMULA({
+          '台帳自動連携_1'!A2:G,
+          IF(LEN('台帳自動連携_1'!A2:A), "通常", ""),
+          '台帳自動連携_1'!I2:X
+        }),
+        LEN('台帳自動連携_1'!A2:A)>0
+      );
+      FILTER(
+        ARRAYFORMULA({
+          '台帳自動連携_2'!A2:D,
+          IF(LEN('台帳自動連携_2'!E2:E), '台帳自動連携_2'!E2:E,
+  IFERROR(VLOOKUP('台帳自動連携_2'!A2:A, '台帳自動連携_1'!A:G, 5, FALSE),
+  "")),
+          IF(LEN('台帳自動連携_2'!F2:F), '台帳自動連携_2'!F2:F,
+  IFERROR(VLOOKUP('台帳自動連携_2'!A2:A, '台帳自動連携_1'!A:G, 6, FALSE),
+  "")),
+          IF(LEN('台帳自動連携_2'!G2:G), '台帳自動連携_2'!G2:G,
+  IFERROR(VLOOKUP('台帳自動連携_2'!A2:A, '台帳自動連携_1'!A:G, 7, FALSE),
+  "")),
+          IF(LEN('台帳自動連携_2'!A2:A), "通常", ""),
+          '台帳自動連携_2'!I2:X
+        }),
+        LEN('台帳自動連携_2'!A2:A)>0
+      )
+    },
+    "SELECT * ORDER BY Col1",
+    0
+  )

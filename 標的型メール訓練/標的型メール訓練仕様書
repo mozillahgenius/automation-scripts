@@ -1,0 +1,254 @@
+1. 目的・概要
+	•	目的：自社HP・関連ニュースリリース・採用ページの内容を“素材”に、Perplexityを用いて各部署・役割に合わせた**標的型メール（疑似フィッシング）**の本文を自動生成し、GASで一斉送信・クリック計測・自動解説返信までを完結させる。
+	•	達成したいこと
+	1.	標的型メール本文の自動生成（Perplexity活用＋自社ページ要約）
+	2.	GAS での一斉送信（個別トークン付与・クリック追跡）
+	3.	不審点を複数盛り込んだ本文生成（難易度段階あり）
+	4.	「表示されるFrom」をあえて“わずかに不審”にする運用（法令・社内規程順守の範囲で）
+	5.	URLクリック者の自動集計・可視化
+	6.	クリック者へ**その場で「不審点の解説メール」**を自動返信
+	7.	記録・レポート（部署別/役職別/難易度別の指標）
+
+注意：**技術的スプーフィング（他社ドメイン偽装）**は法令・取引約款違反リスクが高いため、本仕様では「社内訓練用に許諾済みのサブドメイン／送信エイリアス」「Friendly From（表示名）」「Reply-To差し替え」等、合法かつ社内規程適合の方法に限定します。
+
+⸻
+
+2. システム構成（高レベル）
+	•	Google スプレッドシート：マスタ＆ログ
+	•	Config：Perplexity APIキー、対象URL群、送信者設定、難易度設定など
+	•	Targets：受信者リスト（メール、部署、役職、個人ID 等）
+	•	Campaigns：キャンペーン定義（名称、実施日、難易度、本文テンプレ/プロンプト 等）
+	•	Mails：生成済み本文（キャンペーン×受信者ごと）
+	•	Clicks：クリックログ（token, email, campaign, ts, UA, IP末尾マスク 等）
+	•	Results：集計ビュー（部署別率、役職別率、難易度別、経時）
+	•	GAS（コンテナバウンド）
+	•	バッチ生成：Perplexity呼び出し→本文作成（不審点注入）→Mailsに保存
+	•	送信エンジン：個別トークン埋め込みURL付メール送信、レート制御
+	•	クリック計測エンドポイント（Webアプリ）：doGet(e)で記録→教育LPへ302リダイレクト
+	•	自動解説送信：クリック検知トリガで該当者に解説メール
+	•	ダッシュボード作成：Results更新、ピボット・グラフ
+	•	Perplexity：自社ページのURLをコンテキストに、**社内事情（部門名/役職/最近の社内話題）**を踏まえた日本語メール生成
+
+⸻
+
+3. データ設計（シート列定義）
+
+3.1 Config
+
+Key	Value	備考
+PPLX_API_KEY	******	Script Properties でも可
+COMPANY_URLS	https://example.com,https://example.com/news,...	自社/関連/採用
+SENDER_ALIAS	alerts@training.example.com	許諾済みエイリアス
+SENDER_NAME_WEAK_SUS	exarnple HR（※rn/homoglyph）	わずかな不審性（合法範囲）
+REPLY_TO	no-reply@training.example.com	Reply-To ずらし
+LANDING_PAGE_URL	https://script.google.com/.../exec	GAS WebApp（クリック計測）
+EXPLAIN_LP_URL	https://intra.example.com/security/phishing-lesson	学習ページ
+RATE_LIMIT_PER_MIN	80	送信スロット制御
+PIXEL_TRACKING	TRUE/FALSE	任意（開封率は参考値）
+TOKEN_LENGTH	24	URLトークン長
+MAIL_DIFFICULTY_LEVELS	Easy,Std,Hard	難易度プリセット
+
+3.2 Targets
+
+enabled	email	name	dept	title	uid	manager_email
+
+
+3.3 Campaigns
+
+campaign_id	name	scheduled_at	difficulty	persona_hint	prompt_template	suspicious_flags	status
+
+
+	•	suspicious_flags 例：homoglyph_from, replyto_mismatch, link_text_mismatch, time_pressure, attachment_bait
+
+3.4 Mails
+
+campaign_id	uid	email	token	subject	body_html	body_text	send_status	sent_at
+
+
+3.5 Clicks
+
+ts	campaign_id	uid	email	token	ua	ip_hash	referer
+
+
+	•	ip_hash：IPはハッシュ化＋末尾マスク（プライバシー配慮）
+
+3.6 Results（集計ビュー）
+	•	ピボット：部署別クリック率、役職別、難易度別、経時推移、上位リンクテキスト不一致など
+
+⸻
+
+4. メール生成ロジック（Perplexity前提）
+	1.	Config.COMPANY_URLSの各URLをコンテキストとし、最新の採用情報・製品情報・ニュース要約をPerplexityで生成
+	2.	Campaigns.prompt_template に以下の要素を組込み：
+	•	受信者プロファイル（dept, title）
+	•	最近の社内トピック（任意でスプレッドシートに管理）
+	•	不審点の注入（難易度に応じて数・巧妙さを切替）
+	•	例（安全な範囲）：
+	•	Friendly From：表示名に紛らわしい文字（rn/m、o/0、Unicode類似文字）
+	•	Reply-To 不一致（同一ドメイン内のno-replyに誘導）
+	•	リンクテキストと実URLの不一致（ただし実URLは自社トラッキング→教育LPに限定）
+	•	緊急性・期限圧力（「本日17:00まで」）
+	•	体裁の粗さ（全角/半角、敬称ゆらぎ、署名の情報不足 など）
+	•	擬似添付（.pdf 風リンク名）（実体は教育LP）
+	3.	生成本文は Mails.body_html / body_text に保存
+	4.	クリッカブルURLは LANDING_PAGE_URL?c={campaign_id}&t={token} を埋め込み（リンクテキストはあえて official っぽい）
+
+⸻
+
+5. 送信仕様（GAS）
+	•	送信API：GmailApp.sendEmail(to, subject, bodyText, options) を基本
+	•	options.name に Config.SENDER_NAME_WEAK_SUS
+	•	options.from はGmail側に設定済みのエイリアスのみ使用可（任意Fromは不可）
+	•	options.replyTo に Config.REPLY_TO
+	•	options.htmlBody に Mails.body_html
+	•	options.noReply は必要に応じて
+	•	レート制御：RATE_LIMIT_PER_MIN でスロット化（Utilities.sleepやバッチ分割）
+	•	送信上限：Googleの送信制限に合わせて1日上限・分単位のガード実装
+	•	失敗時リトライ：指数バックオフ（429/Service Unavailable）
+
+⸻
+
+6. クリック計測（GAS Webアプリ）
+	•	構成：doGet(e)
+	•	受信クエリ：c（campaign_id）, t（token）
+	•	Mails で token 照合→該当 uid/email/campaign_id を特定
+	•	Clicks に記録（ts, UA, IPはe.context.clientIpをハッシュ化、Referer保存）
+	•	自動解説送信（#7参照）を非同期でキュー（Triggers or 即時送信）
+	•	リダイレクト：302で EXPLAIN_LP_URL（教育ページ）へ
+	•	二重計測防止：同一 token の多重クリックは初回のみスコアリング、以降は回数カウントに分離
+
+⸻
+
+7. 自動解説メール（クリック者への即時教育）
+	•	トリガ：クリック記録時に送信
+	•	内容：今回メールの不審点の解説＋社内セキュリティハンドブックへの導線
+	•	例：
+	•	表示名が「exarnple HR」→ “rn”と“m”の見分け
+	•	表示FromとReply-Toの不一致
+	•	リンクテキストと実URLの不一致
+	•	不自然な期限圧力／機密要求　…等
+	•	テンプレ：Config または Campaigns に「解説テンプレ」を保持（難易度別に差替）
+
+⸻
+
+8. ダッシュボード・レポート
+	•	Results 更新ジョブ（時限トリガ or 手動メニュー）
+	•	指標例：
+	•	クリック率（全体／部署／役職／難易度）
+	•	初回クリックまでの中央値（送信からの経過分・時）
+	•	再犯率（複数キャンペーン間）
+	•	送信バウンス率／無効アドレス検知
+	•	可視化：スプレッドシートのグラフ（棒・折れ線）、条件付き書式（高リスク部門を強調）
+	•	エクスポート：CSV/TSV、Googleドキュメント1枚サマリー生成（経営会議用）
+
+⸻
+
+9. 管理UI（GASカスタムメニュー）
+	•	メニュー例：「Phishing Training」
+	•	① 下準備（URL要約→素材作成）
+	•	② 本文生成（Perplexity）
+	•	③ テスト送信（自分宛）
+	•	④ 本送信（バッチ＆レート制御）
+	•	⑤ 集計更新
+	•	⑥ ダッシュボードを開く
+	•	⑦ WebApp URL を表示
+
+⸻
+
+10. セキュリティ・コンプライアンス
+	•	同意と告知：社内規程に基づく事前通知（年○回、期間、目的、データ取り扱い）
+	•	範囲：社内ドメインの従業員のみ。顧客・取引先は対象外
+	•	個人情報：最小化（IPはハッシュ化、UAは統計用途、原本IPは保持しない）
+	•	送信者設定：正規に許諾されたサブドメイン／エイリアスのみ使用
+	•	ブロック・オプトアウト：産休・休職者、特別配慮が必要な対象は Targets.enabled=FALSE
+	•	ログ保存期間：○ヶ月（ポリシーに従う）
+	•	誤配対策：テスト送信必須、Targetsのドメイン検証、DMARC/ARC破壊を避ける構成
+	•	外部依存：Perplexityへの送信内容に個人情報を含めない（URLと一般的プロンプトのみ）
+
+⸻
+
+11. 失敗シナリオと対処
+	•	Perplexity失敗：タイムアウト／429→再試行、最悪はローカルテンプレにフォールバック
+	•	Gmail送信上限：スロット制御、日跨ぎ再開、自動ステータス更新
+	•	WebApp停止：保守モード時はクリック時に静的LPへ転送
+
+⸻
+
+12. 開発タスク分解（WBS）
+	1.	シート雛形作成（Config/Targets/Campaigns/Mails/Clicks/Results）
+	2.	Script Properties 設定（Perplexity APIキー等）
+	3.	Perplexity連携関数：URL要約→本文下書き生成→不審点注入（難易度ロジック）
+	4.	トークン発行＆本文埋込（LANDING_PAGE_URL?c=...&t=...）
+	5.	送信エンジン（レート制御、エイリアス/Reply-To設定、ログ追記）
+	6.	WebApp（doGet）（クリック記録→教育LP転送）
+	7.	自動解説返信（クリック検知→テンプレ送信）
+	8.	集計・可視化（Results更新、グラフ）
+	9.	管理メニュー（一連の操作をGUI化）
+	10.	テスト計画（ステージング対象に対するドライラン）
+	11.	運用ドキュメント（FAQ、想定質問、問い合わせ対応フロー）
+
+⸻
+
+13. 疑似フロー（Mermaid）
+
+flowchart TD
+A[Campaign定義] --> B[Perplexityで本文生成\n(会社URL+部署/役職ヒント)]
+B --> C[不審点注入\n(難易度Easy/Std/Hard)]
+C --> D[トークン発行/URL埋込]
+D --> E[送信エンジン(レート制御)]
+E -->|受信者| F[受信者メールクライアント]
+F -->|クリック| G[WebApp doGet(c,t)]
+G --> H[Clicksへ記録]
+H --> I[自動解説メール送信]
+H --> J[Results集計更新]
+G --> K[教育LPへ302リダイレクト]
+
+
+⸻
+
+14. 具体的な“不審点”パターンカタログ（安全運用版）
+	•	From表示名の類似文字：exarnple, Supp0rt, 全角半角混在
+	•	Reply-To不一致：Fromは alerts@training.example.com、Reply-Toは no-reply@training.example.com
+	•	リンクテキスト偽装風：「社内VPNポータル」 と表示しつつ、実URLは自社WebApp
+	•	期限・圧力：「本日17:00までに対応しないと…」
+	•	署名の粗さ：役職が古い/部署名の略称ミス
+	•	擬似添付：給与明細_2025-09.pdf の文字リンク（実URLは教育LP）
+	•	軽微な文法ミス：日本語の不自然さを1〜2箇所（Hardのみ）
+
+いずれも本物の資格情報入力や外部サイト遷移は禁止。計測URLは必ず社内WebAppのみ。
+
+⸻
+
+15. 運用ガイド
+	•	頻度：四半期1回＋臨時（新入社員受入時など）
+	•	事前啓発：直前通知はせず、年初に年間計画の明示で透明性確保
+	•	アフターフォロー：クリック者へ個別に短い補講、全社へ学びのサマリー共有
+	•	KPI：クリック率△%、Hardでの誤クリック率、部署別改善度、リピート率
+
+⸻
+
+16. 拡張（任意）
+	•	開封ピクセル（参考指標）
+	•	端末属性別分析（モバイル/デスクトップ）
+	•	多言語化（日本語/英語）
+	•	アドミン承認フロー（Campaigns→承認→送信）
+	•	SSO連携（従業員マスタ自動同期）
+
+⸻
+
+付録：GAS 実装の要点（コード化時の指針のみ）
+	•	Perplexity呼び出し
+	•	UrlFetchApp.fetch() で REST 呼び出し
+	•	APIキーは PropertiesService.getScriptProperties() から取得
+	•	プロンプトに COMPANY_URLS 要約要求＋「以下の不審点を難易度に応じて混ぜて…」
+	•	トークン生成
+	•	Utilities.getUuid() or ランダムバイトBase64URL化→TOKEN_LENGTHにトリム
+	•	送信
+	•	GmailApp.sendEmail(to, subject, bodyText, {name, replyTo, htmlBody})
+	•	from は Gmail の送信エイリアス設定が前提
+	•	WebApp（計測）
+	•	doGet(e) で c,t 取得→Mails照合→Clicksへ new Date(), UA, hash(IP) を記録
+	•	HtmlService.createHtmlOutputFromFile ではなく 302 リダイレクト（ContentService + Locationヘッダ）
+	•	自動解説
+	•	クリック時に即送 or 時間指定トリガで配信（重複送信防止フラグを Mails に）
+

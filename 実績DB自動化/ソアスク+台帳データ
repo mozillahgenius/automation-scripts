@@ -1,0 +1,7 @@
+=LET(
+  data, {'ソアスク自動連携'!A2:Z; '台帳Query整理'!A2:Z},
+  m, ARRAYFORMULA(IFERROR(DATEVALUE(TO_TEXT(INDEX(data,,13,1))), INDEX(data,,13,1))),
+  start, DATE(YEAR(TODAY()) - IF(TODAY()<DATE(YEAR(TODAY()),12,1),1,0),12,1),
+  finish, EDATE(start,12),
+  FILTER(data, m>=start, m<finish)
+)

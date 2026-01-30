@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4285F4;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"], input[type="password"], textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    .help-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .button-group {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .btn-primary {
+      background-color: #4285F4;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #3367D6;
+    }
+    .btn-secondary {
+      background-color: #f1f3f4;
+      color: #5f6368;
+    }
+    .btn-secondary:hover {
+      background-color: #e8eaed;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 10px;
+      display: none;
+    }
+    .status.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 15px;
+      padding-left: 10px;
+      border-left: 3px solid #4285F4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🔧 Slack議題生成システム - 初期設定</h2>
+    
+    <div class="section">
+      <div class="section-title">基本設定</div>
+      <div class="form-group">
+        <label for="spreadsheetId">スプレッドシートID</label>
+        <input type="text" id="spreadsheetId" placeholder="例: 1ABC...xyz">
+        <div class="help-text">このスプレッドシートのIDが自動入力されています</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="company">会社名</label>
+        <input type="text" id="company" placeholder="例: 株式会社サンプル">
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">Slack設定</div>
+      <div class="form-group">
+        <label for="slackToken">Slack Bot Token</label>
+        <input type="password" id="slackToken" placeholder="xoxb-...">
+        <div class="help-text">Slack Appの OAuth & Permissions から取得</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="slackSigningSecret">Slack Signing Secret</label>
+        <input type="password" id="slackSigningSecret" placeholder="...">
+        <div class="help-text">Slack Appの Basic Information から取得（オプション）</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="targetChannels">監視対象チャンネルID</label>
+        <textarea id="targetChannels" placeholder="C1234567890, C0987654321"></textarea>
+        <div class="help-text">カンマ区切りで複数指定可能</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="notifyChannel">通知先チャンネルID</label>
+        <input type="text" id="notifyChannel" placeholder="C1234567890">
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">OpenAI設定</div>
+      <div class="form-group">
+        <label for="openaiKey">OpenAI API Key</label>
+        <input type="password" id="openaiKey" placeholder="sk-...">
+        <div class="help-text">OpenAI Platformから取得</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">通知設定</div>
+      <div class="form-group">
+        <label for="notifyEmails">通知先メールアドレス</label>
+        <textarea id="notifyEmails" placeholder="email1@example.com, email2@example.com"></textarea>
+        <div class="help-text">カンマ区切りで複数指定可能</div>
+      </div>
+    </div>
+    
+    <div id="status" class="status"></div>
+    
+    <div class="button-group">
+      <button class="btn-secondary" onclick="loadSettings()">設定を読み込む</button>
+      <button class="btn-primary" onclick="saveSettings()">設定を保存</button>
+    </div>
+  </div>
+  
+  <script>
+    // ページ読み込み時に現在の設定を取得
+    window.onload = function() {
+      document.getElementById('spreadsheetId').value = google.script.host.origin ? 
+        google.script.host.origin.split('/')[5] : '';
+      loadSettings();
+    };
+    
+    function loadSettings() {
+      google.script.run
+        .withSuccessHandler(function(settings) {
+          if (settings.SPREADSHEET_ID) {
+            document.getElementById('spreadsheetId').value = settings.SPREADSHEET_ID;
+          }
+          if (settings.SLACK_BOT_TOKEN) {
+            document.getElementById('slackToken').value = settings.SLACK_BOT_TOKEN;
+          }
+          if (settings.SLACK_SIGNING_SECRET) {
+            document.getElementById('slackSigningSecret').value = settings.SLACK_SIGNING_SECRET;
+          }
+          if (settings.OPENAI_API_KEY) {
+            document.getElementById('openaiKey').value = settings.OPENAI_API_KEY;
+          }
+          
+          // Configシートから追加設定を読み込む場合はここに追加
+          showStatus('設定を読み込みました', 'success');
+        })
+        .withFailureHandler(function(error) {
+          showStatus('設定の読み込みに失敗しました: ' + error, 'error');
+        })
+        .getSettings();
+    }
+    
+    function saveSettings() {
+      const settings = {
+        SPREADSHEET_ID: document.getElementById('spreadsheetId').value,
+        SLACK_BOT_TOKEN: document.getElementById('slackToken').value,
+        SLACK_SIGNING_SECRET: document.getElementById('slackSigningSecret').value,
+        OPENAI_API_KEY: document.getElementById('openaiKey').value
+      };
+      
+      // 空の値は送信しない
+      Object.keys(settings).forEach(key => {
+        if (!settings[key]) {
+          delete settings[key];
+        }
+      });
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showStatus(result, 'success');
+          
+          // Configシートも更新
+          updateConfigSheet();
+        })
+        .withFailureHandler(function(error) {
+          showStatus('保存に失敗しました: ' + error, 'error');
+        })
+        .saveSettings(settings);
+    }
+    
+    function updateConfigSheet() {
+      // Configシートの更新は別途実装
+      const configData = {
+        company: document.getElementById('company').value,
+        targetChannels: document.getElementById('targetChannels').value,
+        notifySlackChannel: document.getElementById('notifyChannel').value,
+        notifyEmails: document.getElementById('notifyEmails').value
+      };
+      
+      // この部分は実際のConfigシート更新関数を呼び出す
+      console.log('Config data:', configData);
+    }
+    
+    function showStatus(message, type) {
+      const statusDiv = document.getElementById('status');
+      statusDiv.textContent = message;
+      statusDiv.className = 'status ' + type;
+      statusDiv.style.display = 'block';
+      
+      setTimeout(function() {
+        statusDiv.style.display = 'none';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

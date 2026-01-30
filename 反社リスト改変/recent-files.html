@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h2 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      .file-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .file-table th {
+        background-color: #f5f5f5;
+        padding: 12px;
+        text-align: left;
+        border-bottom: 2px solid #ddd;
+      }
+      .file-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #eee;
+      }
+      .file-table tr:hover {
+        background-color: #f9f9f9;
+      }
+      .file-name {
+        color: #2196F3;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .file-name:hover {
+        text-decoration: underline;
+      }
+      .date-cell {
+        font-size: 14px;
+        color: #666;
+      }
+      .type-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .type-source {
+        background-color: #e3f2fd;
+        color: #1976D2;
+      }
+      .type-output {
+        background-color: #e8f5e9;
+        color: #388E3C;
+      }
+      .button-group {
+        margin-bottom: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        margin-right: 10px;
+      }
+      .refresh-btn {
+        background-color: #2196F3;
+        color: white;
+      }
+      .refresh-btn:hover {
+        background-color: #1976D2;
+      }
+      .close-btn {
+        background-color: #757575;
+        color: white;
+      }
+      .close-btn:hover {
+        background-color: #616161;
+      }
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+      .error {
+        color: #f44336;
+        padding: 15px;
+        background-color: #ffebee;
+        border-radius: 4px;
+        margin-bottom: 20px;
+      }
+      .no-files {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>最近のファイル</h2>
+
+      <div class="button-group">
+        <button class="refresh-btn" onclick="refreshFiles()">更新</button>
+        <button class="close-btn" onclick="closeDialog()">閉じる</button>
+      </div>
+
+      <div id="content">
+        <div class="loading">ファイルを読み込み中...</div>
+      </div>
+    </div>
+
+    <script>
+      // ページ読み込み時にファイル一覧を取得
+      window.onload = function() {
+        loadRecentFiles();
+      };
+
+      function loadRecentFiles() {
+        document.getElementById('content').innerHTML = '<div class="loading">ファイルを読み込み中...</div>';
+        google.script.run.withSuccessHandler(displayFiles)
+          .withFailureHandler(showError)
+          .getRecentProcessedFiles();
+      }
+
+      function displayFiles(files) {
+        const content = document.getElementById('content');
+
+        if (!files || files.length === 0) {
+          content.innerHTML = '<div class="no-files">最近処理されたファイルはありません</div>';
+          return;
+        }
+
+        let html = `
+          <table class="file-table">
+            <thead>
+              <tr>
+                <th>ファイル名</th>
+                <th>種類</th>
+                <th>処理日時</th>
+                <th>レコード数</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        files.forEach(file => {
+          const typeClass = file.type === 'source' ? 'type-source' : 'type-output';
+          const typeName = file.type === 'source' ? 'ソース' : '出力';
+          const date = new Date(file.processedDate).toLocaleString('ja-JP');
+
+          html += `
+            <tr>
+              <td>
+                <a href="#" class="file-name" onclick="openFile('${file.id}'); return false;">
+                  ${file.name}
+                </a>
+              </td>
+              <td>
+                <span class="type-badge ${typeClass}">${typeName}</span>
+              </td>
+              <td class="date-cell">${date}</td>
+              <td>${file.recordCount || '-'}</td>
+            </tr>
+          `;
+        });
+
+        html += `
+            </tbody>
+          </table>
+        `;
+
+        content.innerHTML = html;
+      }
+
+      function openFile(fileId) {
+        // ファイルを開く
+        window.open(`https://docs.google.com/spreadsheets/d/${fileId}`, '_blank');
+      }
+
+      function refreshFiles() {
+        loadRecentFiles();
+      }
+
+      function closeDialog() {
+        google.script.host.close();
+      }
+
+      function showError(error) {
+        const content = document.getElementById('content');
+        content.innerHTML = `<div class="error">エラーが発生しました: ${error.message}</div>`;
+      }
+    </script>
+  </body>
+</html>

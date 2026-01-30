@@ -1,0 +1,20 @@
+display_information:
+  name: Slack Naming Convention Manager
+  description: Monitors and audits Slack channel naming conventions
+  long_description: This application automatically collects channel names within your Slack workspace and audits them for compliance with organizational naming conventions. It generates periodic reports when violations are detected, helping maintain proper naming standards across your workspace.
+  background_color: "#4A154B"
+features:
+  bot_user:
+    display_name: Naming Audit Bot
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - channels:read
+      - groups:read
+      - team:read
+      - users:read
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

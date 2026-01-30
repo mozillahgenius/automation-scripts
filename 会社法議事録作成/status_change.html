@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 100%;
+    }
+
+    h2 {
+      color: #1a73e8;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+    }
+
+    .current-status {
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-left: 4px solid #1a73e8;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+
+    .current-status strong {
+      color: #1a73e8;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 25px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background-color: #1a73e8;
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      background-color: #1557b0;
+    }
+
+    .btn-primary:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background-color: #f1f3f4;
+      color: #333;
+      padding: 10px 20px;
+    }
+
+    .btn-secondary:hover {
+      background-color: #e8eaed;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .message.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #1a73e8;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📝 ステータス変更</h2>
+
+    <div id="message" class="message"></div>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <div>読み込み中...</div>
+    </div>
+
+    <div id="form" style="display: none;">
+      <div class="form-group">
+        <label for="documentSelect">ドキュメントを選択</label>
+        <select id="documentSelect" onchange="onDocumentChange()">
+          <option value="">-- ドキュメントを選択してください --</option>
+        </select>
+      </div>
+
+      <div id="statusInfo" class="current-status" style="display: none;">
+        現在のステータス: <strong id="currentStatus"></strong>
+      </div>
+
+      <div class="form-group">
+        <label for="statusSelect">新しいステータス</label>
+        <select id="statusSelect" disabled>
+          <option value="">-- まずドキュメントを選択してください --</option>
+          <option value="編集中">編集中</option>
+          <option value="承認済">承認済</option>
+          <option value="最終版">最終版</option>
+        </select>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-primary" id="changeBtn" onclick="changeStatus()" disabled>
+          ステータス変更
+        </button>
+        <button class="btn-secondary" onclick="google.script.host.close()">
+          閉じる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let documents = [];
+    let selectedDocument = null;
+
+    // 初期化
+    window.onload = function() {
+      loadDocuments();
+    };
+
+    // ドキュメント一覧を読み込み
+    function loadDocuments() {
+      google.script.run
+        .withSuccessHandler(onDocumentsLoaded)
+        .withFailureHandler(onError)
+        .getDocumentsForStatusChange();
+    }
+
+    // ドキュメント読み込み成功時
+    function onDocumentsLoaded(docs) {
+      documents = docs;
+      const select = document.getElementById('documentSelect');
+
+      docs.forEach(doc => {
+        const option = document.createElement('option');
+        option.value = doc.docId;
+        option.textContent = `${doc.title} (${doc.meetingDate}) - ${doc.status}`;
+        select.appendChild(option);
+      });
+
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('form').style.display = 'block';
+    }
+
+    // ドキュメント選択時
+    function onDocumentChange() {
+      const select = document.getElementById('documentSelect');
+      const docId = select.value;
+
+      if (!docId) {
+        selectedDocument = null;
+        document.getElementById('statusInfo').style.display = 'none';
+        document.getElementById('statusSelect').disabled = true;
+        document.getElementById('statusSelect').value = '';
+        document.getElementById('changeBtn').disabled = true;
+        return;
+      }
+
+      selectedDocument = documents.find(doc => doc.docId === docId);
+
+      if (selectedDocument) {
+        document.getElementById('currentStatus').textContent = selectedDocument.status;
+        document.getElementById('statusInfo').style.display = 'block';
+        document.getElementById('statusSelect').disabled = false;
+        document.getElementById('statusSelect').value = '';
+
+        // 現在のステータスと同じ選択肢を無効化
+        const statusOptions = document.getElementById('statusSelect').options;
+        for (let i = 0; i < statusOptions.length; i++) {
+          if (statusOptions[i].value === selectedDocument.status) {
+            statusOptions[i].disabled = true;
+          } else {
+            statusOptions[i].disabled = false;
+          }
+        }
+      }
+
+      updateChangeButton();
+    }
+
+    // ステータス選択の変更を監視
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('statusSelect').addEventListener('change', updateChangeButton);
+    });
+
+    // 変更ボタンの有効/無効を更新
+    function updateChangeButton() {
+      const statusSelect = document.getElementById('statusSelect');
+      const changeBtn = document.getElementById('changeBtn');
+      changeBtn.disabled = !selectedDocument || !statusSelect.value;
+    }
+
+    // ステータス変更
+    function changeStatus() {
+      const newStatus = document.getElementById('statusSelect').value;
+
+      if (!selectedDocument || !newStatus) {
+        showMessage('ドキュメントと新しいステータスを選択してください', 'error');
+        return;
+      }
+
+      if (newStatus === selectedDocument.status) {
+        showMessage('現在のステータスと同じです', 'error');
+        return;
+      }
+
+      // ボタンを無効化
+      document.getElementById('changeBtn').disabled = true;
+      document.getElementById('changeBtn').textContent = '変更中...';
+
+      google.script.run
+        .withSuccessHandler(onStatusChanged)
+        .withFailureHandler(onError)
+        .changeDocumentStatus(selectedDocument.docId, newStatus);
+    }
+
+    // ステータス変更成功時
+    function onStatusChanged(result) {
+      if (result.success) {
+        showMessage(result.message, 'success');
+
+        // ドキュメント情報を更新
+        selectedDocument.status = document.getElementById('statusSelect').value;
+        document.getElementById('currentStatus').textContent = selectedDocument.status;
+
+        // セレクトボックスを更新
+        const select = document.getElementById('documentSelect');
+        const option = select.options[select.selectedIndex];
+        const doc = selectedDocument;
+        option.textContent = `${doc.title} (${doc.meetingDate}) - ${doc.status}`;
+
+        // フォームをリセット
+        document.getElementById('statusSelect').value = '';
+        onDocumentChange();
+
+        // 3秒後にメッセージを消す
+        setTimeout(() => {
+          document.getElementById('message').style.display = 'none';
+        }, 3000);
+      } else {
+        showMessage('エラー: ' + result.error, 'error');
+      }
+
+      // ボタンを元に戻す
+      document.getElementById('changeBtn').textContent = 'ステータス変更';
+      updateChangeButton();
+    }
+
+    // エラー時
+    function onError(error) {
+      showMessage('エラーが発生しました: ' + error.message, 'error');
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('form').style.display = 'block';
+      document.getElementById('changeBtn').textContent = 'ステータス変更';
+      updateChangeButton();
+    }
+
+    // メッセージ表示
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = text;
+      messageDiv.className = 'message ' + type;
+      messageDiv.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

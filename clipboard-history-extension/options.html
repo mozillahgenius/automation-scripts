@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>クリップボード履歴マネージャー - 設定</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚙️ 設定</h1>
+    </header>
+
+    <main>
+      <section class="settings-section">
+        <h2>キーボードショートカット</h2>
+        <p class="description">
+          キーボードショートカットをカスタマイズできます。
+        </p>
+
+        <div class="shortcut-info">
+          <div class="shortcut-item">
+            <div class="shortcut-label">
+              <strong>クリップボード履歴を開く</strong>
+              <span class="default-key">デフォルト: ⌥V (Option+V / Alt+V)</span>
+            </div>
+            <p style="margin-top: 8px; font-size: 13px; color: #666;">
+              このショートカットで履歴ウィンドウが開きます。履歴のアイテムをクリックすると、アクティブな入力欄に直接貼り付けられます。
+            </p>
+          </div>
+        </div>
+
+        <button id="openShortcuts" class="btn-primary">
+          ショートカットをカスタマイズ
+        </button>
+      </section>
+
+      <section class="settings-section">
+        <h2>履歴の設定</h2>
+
+        <div class="setting-item">
+          <label for="maxHistorySize">
+            <strong>最大保存件数</strong>
+            <span class="setting-description">クリップボード履歴の最大保存件数を設定します</span>
+          </label>
+          <div class="input-group">
+            <input type="number" id="maxHistorySize" min="10" max="500" value="200">
+            <span class="input-suffix">件</span>
+          </div>
+        </div>
+
+        <button id="saveSettings" class="btn-primary">
+          設定を保存
+        </button>
+        <span id="saveStatus" class="save-status"></span>
+      </section>
+
+      <section class="settings-section">
+        <h2>データ管理</h2>
+
+        <div class="info-box">
+          <p><strong>現在の履歴件数:</strong> <span id="historyCount">読み込み中...</span></p>
+        </div>
+
+        <button id="clearAllHistory" class="btn-danger">
+          全ての履歴を削除
+        </button>
+      </section>
+
+      <section class="settings-section info-section">
+        <h2>使い方</h2>
+        <ul class="usage-list">
+          <li>✂️ ブラウザ内でテキストをコピー（⌘C）すると自動的に履歴に保存されます</li>
+          <li>⌥V で履歴ウィンドウを開きます</li>
+          <li>📋 履歴のアイテムをクリックすると、アクティブな入力欄に直接貼り付けられます</li>
+          <li>🔧 拡張機能アイコンをクリックすると、この設定ページが開きます</li>
+          <li>🗑️ 個別削除や全削除も可能です</li>
+          <li>⏰ 相対時刻で履歴を確認できます</li>
+        </ul>
+      </section>
+
+      <footer>
+        <p class="version">バージョン 1.0.0</p>
+      </footer>
+    </main>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

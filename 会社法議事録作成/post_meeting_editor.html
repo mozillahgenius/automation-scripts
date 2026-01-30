@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    .required {
+      color: red;
+    }
+    .button-group {
+      margin-top: 20px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .btn-secondary {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #0b7dda;
+    }
+    .btn-cancel {
+      background-color: #757575;
+      color: white;
+    }
+    .btn-cancel:hover {
+      background-color: #616161;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4CAF50;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid red;
+      border-radius: 4px;
+      background-color: #ffebee;
+      display: none;
+    }
+    .success-message {
+      color: green;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid green;
+      border-radius: 4px;
+      background-color: #e8f5e9;
+      display: none;
+    }
+    .info-box {
+      background-color: #e3f2fd;
+      border: 1px solid #2196f3;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+    .preview-container {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f5f5f5;
+    }
+    .preview-header {
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .preview-content {
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .officer-checkbox-container {
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 4px;
+      background-color: #fafafa;
+    }
+  </style>
+</head>
+<body>
+  <h2>会議終了後 議事録追記</h2>
+
+  <div class="info-box">
+    <strong>会議終了後に議事録を完成させるための入力画面です</strong><br>
+    すべての項目を記入して、実際の会議での決議結果を正確に記録してください。
+  </div>
+
+  <!-- ドキュメント選択 -->
+  <div class="section">
+    <div class="form-group">
+      <label for="docSelect">対象ドキュメント <span class="required">*</span></label>
+      <select id="docSelect" onchange="onDocumentSelected()" required>
+        <option value="">選択してください</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="motionNumber">議案番号</label>
+      <input type="number" id="motionNumber" min="1" value="1">
+      <small>既存の議案を上書きする場合は同じ番号を指定してください</small>
+    </div>
+  </div>
+
+  <!-- 出席者情報 -->
+  <div class="section">
+    <h3>出席者情報</h3>
+
+    <div class="form-group">
+      <label for="attendingOfficers">出席役員</label>
+      <div id="attendingOfficersList" class="officer-checkbox-container">
+        <!-- 役員チェックボックスがここに動的に追加されます -->
+      </div>
+      <textarea id="attendingOfficersCustom" placeholder="その他の出席者がいる場合は、氏名 役職の形式で記入" style="margin-top: 10px; min-height: 60px;"></textarea>
+      <small>登録済み役員から選択するか、その他の出席者を直接入力してください</small>
+    </div>
+
+    <div class="form-group">
+      <label for="absentOfficers">欠席役員</label>
+      <div id="absentOfficersList" class="officer-checkbox-container">
+        <!-- 役員チェックボックスがここに動的に追加されます -->
+      </div>
+      <textarea id="absentOfficersCustom" placeholder="その他の欠席者がいる場合は、氏名 役職の形式で記入" style="margin-top: 10px; min-height: 60px;"></textarea>
+      <small>登録済み役員から選択するか、その他の欠席者を直接入力してください</small>
+    </div>
+  </div>
+
+  <!-- 議案選択 -->
+  <div class="section">
+    <h3>議案選択</h3>
+
+    <div class="form-group">
+      <label for="existingMotion">既存の議案から選択</label>
+      <select id="existingMotion" onchange="onMotionSelected()">
+        <option value="">新規議案を入力する場合は選択しない</option>
+      </select>
+      <small>既存の議案を選択して決議結果を記録できます</small>
+    </div>
+
+    <div class="form-group">
+      <label for="motionTitle">議案タイトル</label>
+      <input type="text" id="motionTitle" placeholder="例: 2024年度事業計画承認の件">
+    </div>
+
+    <div class="form-group">
+      <label for="motionContent">議案内容</label>
+      <textarea id="motionContent" placeholder="議案の詳細内容を入力してください"></textarea>
+      <small>HTML形式での入力も可能です</small>
+    </div>
+  </div>
+
+  <!-- 決議情報（必須） -->
+  <div class="section">
+    <h3>決議情報（必須項目）</h3>
+
+    <div class="form-group">
+      <label for="presenter">説明者（進行担当者）</label>
+      <select id="presenterSelect" onchange="onPresenterSelected()">
+        <option value="">選択してください</option>
+      </select>
+      <input type="text" id="presenterCustom" placeholder="または直接入力: 例: 代表取締役社長 山田太郎" style="margin-top: 10px;">
+      <small>議案を説明した役員を選択または入力</small>
+    </div>
+
+    <div class="form-group">
+      <label for="resolutionResult">決議結果</label>
+      <select id="resolutionResult">
+        <option value="">選択してください</option>
+        <option value="全員一致で承認">全員一致で承認</option>
+        <option value="賛成多数で承認">賛成多数で承認</option>
+        <option value="条件付きで承認">条件付きで承認</option>
+        <option value="継続審議">継続審議</option>
+        <option value="否決">否決</option>
+        <option value="報告事項">報告事項（決議不要）</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="votingDetails">賛否の詳細</label>
+      <input type="text" id="votingDetails" placeholder="例: 賛成8名、反対2名、棄権1名">
+      <small>具体的な賛成・反対・棄権の人数を記入</small>
+    </div>
+
+    <div class="form-group">
+      <label for="specialInterest">特別利害関係人</label>
+      <textarea id="specialInterest" placeholder="例: 田中取締役（本議案の契約相手方代表のため退席）&#10;なし（特別利害関係人なし）"></textarea>
+      <small>特別利害関係により議決に参加しなかった取締役を記載</small>
+    </div>
+
+    <div class="form-group">
+      <label for="conditions">付帯条件・留意事項</label>
+      <textarea id="conditions" placeholder="例: 実施にあたっては月次で進捗報告を行うこと&#10;なし（付帯条件なし）"></textarea>
+      <small>決議に付された条件や留意事項</small>
+    </div>
+  </div>
+
+  <!-- プレビュー -->
+  <div class="preview-container" id="previewContainer">
+    <div class="preview-header">プレビュー</div>
+    <div class="preview-content" id="previewContent"></div>
+  </div>
+
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>処理中...</p>
+  </div>
+
+  <div id="errorMessage" class="error-message"></div>
+  <div id="successMessage" class="success-message"></div>
+
+  <div class="button-group">
+    <button class="btn-secondary" onclick="previewMotion()">プレビュー</button>
+    <button class="btn-primary" onclick="saveMotion()">議事録に追記</button>
+    <button class="btn-cancel" onclick="google.script.host.close()">キャンセル</button>
+  </div>
+
+  <script>
+    let currentDocId = null;
+
+    let officersList = [];
+    let existingMotions = [];
+
+    // ページ読み込み時にドキュメント一覧を取得
+    window.onload = function() {
+      loadDocuments();
+      loadOfficers();
+    };
+
+    function loadDocuments() {
+      google.script.run
+        .withSuccessHandler(function(docsJson) {
+          const select = document.getElementById('docSelect');
+
+          if (!docsJson) {
+            select.innerHTML = '<option value="">ドキュメントがありません</option>';
+            return;
+          }
+
+          let docs;
+          try {
+            if (typeof docsJson === 'string') {
+              docs = JSON.parse(docsJson);
+            } else {
+              docs = docsJson;
+            }
+          } catch (e) {
+            console.error('JSONパースエラー:', e);
+            select.innerHTML = '<option value="">エラー: データ形式が不正です</option>';
+            return;
+          }
+
+          if (!docs || docs.length === 0) {
+            select.innerHTML = '<option value="">ドキュメントがありません</option>';
+            return;
+          }
+
+          select.innerHTML = '<option value="">選択してください</option>';
+          docs.forEach(doc => {
+            const option = document.createElement('option');
+            option.value = doc.id;
+            option.textContent = `${doc.title} (${doc.meetingDate || '日付なし'})`;
+            select.appendChild(option);
+          });
+        })
+        .withFailureHandler(function(error) {
+          console.error('ドキュメント一覧取得エラー:', error);
+          document.getElementById('docSelect').innerHTML =
+            '<option value="">エラー: ドキュメント一覧を取得できません</option>';
+        })
+        .getDocsList();
+    }
+
+    function onDocumentSelected() {
+      const select = document.getElementById('docSelect');
+      currentDocId = select.value;
+
+      if (currentDocId) {
+        // 次の議案番号を提案
+        google.script.run
+          .withSuccessHandler(function(nextNumber) {
+            if (nextNumber) {
+              document.getElementById('motionNumber').value = nextNumber;
+            }
+          })
+          .getNextMotionNumber(currentDocId);
+
+        // 既存の議案を読み込み
+        loadExistingMotions(currentDocId);
+      }
+    }
+
+    function loadOfficers() {
+      google.script.run
+        .withSuccessHandler(function(officers) {
+          if (officers && officers.length > 0) {
+            officersList = officers;
+            populateOfficerCheckboxes(officers);
+            populatePresenterSelect(officers);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('役員一覧取得エラー:', error);
+        })
+        .getOfficersList();
+    }
+
+    function populateOfficerCheckboxes(officers) {
+      const attendingDiv = document.getElementById('attendingOfficersList');
+      const absentDiv = document.getElementById('absentOfficersList');
+
+      attendingDiv.innerHTML = '';
+      absentDiv.innerHTML = '';
+
+      officers.forEach((officer, index) => {
+        const officerName = `${officer.name} ${officer.position}`;
+
+        // 出席者用チェックボックス
+        const attendingLabel = document.createElement('label');
+        attendingLabel.style.display = 'block';
+        attendingLabel.style.marginBottom = '5px';
+        attendingLabel.innerHTML = `
+          <input type="checkbox" id="attending_${index}" value="${officerName}" style="margin-right: 10px;">
+          ${officerName}
+        `;
+        attendingDiv.appendChild(attendingLabel);
+
+        // 欠席者用チェックボックス
+        const absentLabel = document.createElement('label');
+        absentLabel.style.display = 'block';
+        absentLabel.style.marginBottom = '5px';
+        absentLabel.innerHTML = `
+          <input type="checkbox" id="absent_${index}" value="${officerName}" style="margin-right: 10px;"
+                 onchange="handleAttendanceChange(${index})">
+          ${officerName}
+        `;
+        absentDiv.appendChild(absentLabel);
+
+        // 出席/欠席の排他制御
+        document.getElementById(`attending_${index}`).addEventListener('change', function() {
+          if (this.checked) {
+            document.getElementById(`absent_${index}`).checked = false;
+          }
+        });
+      });
+    }
+
+    function handleAttendanceChange(index) {
+      const absentCheckbox = document.getElementById(`absent_${index}`);
+      if (absentCheckbox.checked) {
+        document.getElementById(`attending_${index}`).checked = false;
+      }
+    }
+
+    function populatePresenterSelect(officers) {
+      const select = document.getElementById('presenterSelect');
+      select.innerHTML = '<option value="">選択してください</option>';
+
+      officers.forEach(officer => {
+        const option = document.createElement('option');
+        option.value = `${officer.name} ${officer.position}`;
+        option.textContent = `${officer.name} ${officer.position}`;
+        select.appendChild(option);
+      });
+    }
+
+    function onPresenterSelected() {
+      const select = document.getElementById('presenterSelect');
+      const customInput = document.getElementById('presenterCustom');
+      if (select.value) {
+        customInput.value = '';
+      }
+    }
+
+    function loadExistingMotions(docId) {
+      google.script.run
+        .withSuccessHandler(function(motions) {
+          existingMotions = motions || [];
+          const select = document.getElementById('existingMotion');
+          select.innerHTML = '<option value="">新規議案を入力する場合は選択しない</option>';
+
+          existingMotions.forEach(motion => {
+            const option = document.createElement('option');
+            option.value = motion.motionNumber;
+            option.textContent = `第${motion.motionNumber}号議案: ${motion.title}`;
+            select.appendChild(option);
+          });
+        })
+        .withFailureHandler(function(error) {
+          console.error('議案一覧取得エラー:', error);
+        })
+        .getMotionsList(docId);
+    }
+
+    function onMotionSelected() {
+      const select = document.getElementById('existingMotion');
+      if (select.value) {
+        const selectedMotion = existingMotions.find(m => m.motionNumber == select.value);
+        if (selectedMotion) {
+          document.getElementById('motionNumber').value = selectedMotion.motionNumber;
+          document.getElementById('motionTitle').value = selectedMotion.title;
+          document.getElementById('motionContent').value = selectedMotion.content || '';
+        }
+      }
+    }
+
+    function previewMotion() {
+      if (!validateForm()) {
+        return;
+      }
+
+      const motionData = collectMotionData();
+
+      // プレビュー表示
+      let preview = '';
+
+      // 出席役員・欠席役員があれば表示
+      if (motionData.attendingOfficers) {
+        preview += `【出席役員】\n${motionData.attendingOfficers}\n\n`;
+      }
+      if (motionData.absentOfficers && motionData.absentOfficers !== 'なし') {
+        preview += `【欠席役員】\n${motionData.absentOfficers}\n\n`;
+      }
+
+      // 議案番号とタイトル
+      if (motionData.motionNumber && motionData.title) {
+        preview += `第${motionData.motionNumber}号議案　${motionData.title}\n\n`;
+      }
+
+      // 提案者
+      if (motionData.presenter) {
+        preview += `【提案者】\n${motionData.presenter}\n\n`;
+      }
+
+      // 議案内容
+      if (motionData.content) {
+        preview += `【議案内容】\n${motionData.content}\n\n`;
+      }
+
+      // 決議結果
+      if (motionData.resolutionResult) {
+        preview += `【決議結果】\n議長が議場に諮ったところ、${motionData.resolutionResult}した。\n`;
+        if (motionData.votingDetails) {
+          preview += `（${motionData.votingDetails}）\n`;
+        }
+        preview += '\n';
+      }
+
+      // 特別利害関係人
+      if (motionData.specialInterest && motionData.specialInterest !== 'なし') {
+        preview += `【特別利害関係人】\n${motionData.specialInterest}\n\n`;
+      }
+
+      // 付帯条件
+      if (motionData.conditions && motionData.conditions !== 'なし') {
+        preview += `【付帯条件・留意事項】\n${motionData.conditions}\n\n`;
+      }
+
+      if (!preview) {
+        preview = '入力された情報がありません';
+      }
+
+      document.getElementById('previewContent').textContent = preview;
+      document.getElementById('previewContainer').style.display = 'block';
+    }
+
+    function saveMotion() {
+      if (!validateForm()) {
+        return;
+      }
+
+      const motionData = collectMotionData();
+
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(onSaveSuccess)
+        .withFailureHandler(onSaveError)
+        .addPostMeetingMotion(motionData);
+    }
+
+    function collectMotionData() {
+      // 出席者を収集
+      const attendingOfficers = [];
+      officersList.forEach((officer, index) => {
+        if (document.getElementById(`attending_${index}`).checked) {
+          attendingOfficers.push(`${officer.name} ${officer.position}`);
+        }
+      });
+      const customAttending = document.getElementById('attendingOfficersCustom').value;
+      const allAttending = attendingOfficers.join('\n') +
+                          (customAttending ? '\n' + customAttending : '');
+
+      // 欠席者を収集
+      const absentOfficers = [];
+      officersList.forEach((officer, index) => {
+        if (document.getElementById(`absent_${index}`).checked) {
+          absentOfficers.push(`${officer.name} ${officer.position}`);}
+        }
+      });
+      const customAbsent = document.getElementById('absentOfficersCustom').value;
+      const allAbsent = absentOfficers.join('\n') +
+                       (customAbsent ? '\n' + customAbsent : '');
+
+      // 提案者を取得
+      const presenterSelect = document.getElementById('presenterSelect').value;
+      const presenterCustom = document.getElementById('presenterCustom').value;
+      const presenter = presenterSelect || presenterCustom;
+
+      return {
+        docId: currentDocId,
+        motionNumber: document.getElementById('motionNumber').value,
+        title: document.getElementById('motionTitle').value,
+        content: document.getElementById('motionContent').value,
+        attendingOfficers: allAttending,
+        absentOfficers: allAbsent || 'なし',
+        presenter: presenter,
+        resolutionResult: document.getElementById('resolutionResult').value,
+        votingDetails: document.getElementById('votingDetails').value,
+        specialInterest: document.getElementById('specialInterest').value || 'なし',
+        conditions: document.getElementById('conditions').value || 'なし',
+        isPostMeeting: true
+      };
+    }
+
+    function validateForm() {
+      if (!currentDocId) {
+        showError('ドキュメントを選択してください');
+        return false;
+      }
+
+      // 必須項目はドキュメント選択のみ
+      // 他の項目はすべて任意
+
+      return true;
+    }
+
+    function onSaveSuccess(result) {
+      showLoading(false);
+      if (result.success) {
+        showSuccess(result.message);
+        setTimeout(() => {
+          google.script.host.close();
+        }, 2000);
+      } else {
+        showError(result.error);
+      }
+    }
+
+    function onSaveError(error) {
+      showLoading(false);
+      showError('エラー: ' + error.toString());
+    }
+
+    function showLoading(show) {
+      document.querySelector('.loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

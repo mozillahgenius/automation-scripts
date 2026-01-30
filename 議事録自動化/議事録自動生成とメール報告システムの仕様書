@@ -1,0 +1,165 @@
+議事録自動生成とメール報告システムの仕様書
+
+### Google Apps Script を使用した Google Meet 
+ 議事録自動生成とメール報告システムの仕様書
+
+ #### 1. 目的
+ 本システムは、Google Meet で録画および文字起こし（トランスクリプト）され
+ た会議データを自動的に取得し、Gemini API 
+ を活用して議事録形式に整理した上で、指定の受信者にメールで報告するもので
+ す。これにより、会議後の手作業を削減し、生産性を向上させます。対象は 
+ Google Workspace の有料プラン（Business Standard 
+ 以上）ユーザーで、自動化を Google Apps Script (GAS) で実現します。
+
+ #### 2. 機能概要
+ - **データ取得**: Google Calendar API で指定カレンダーの直近の会議イベントを取得し、該当イベントに紐づく Google Meet のトランスクリプトを Meet API 経由で取得。
+ - **議事録生成**: Vertex AI の Gemini API を利用。設定シートでカスタマイズ可能なプロンプトを用い、構造化された議事録（議題、決定事項、アクションアイテム等）を生成。
+ - **メール報告**: 生成した議事録を Gmail で送信。宛先はカレンダー参加者を自動取得し、設定シートで指定する追加宛先も併送。
+ - **自動化**: 時間駆動トリガー（例: 毎時）で定期実行。重複処理防止のため実行ログをシート管理。
+ - **設定/ログ管理**: Google スプレッドシートで監視カレンダー、プロンプト、追加宛先、処理済みイベント等を一元管理。
+
+ #### 3. システム構成
+ - **プラットフォーム**: Google Apps Script (GAS)（Google Workspace と連携）
+ - **API/サービス**:
+   - Google Calendar API: 会議イベント取得
+   - Google Meet REST API: トランスクリプト取得
+   - Vertex AI Gemini API: 要約/議事録生成（OAuth 利用）
+   - Gmail API / GmailApp: メール送信
+   - Google Drive API: 録画/トランスクリプトファイルのアクセス（必要に応じて）
+   - Google Sheets API: 設定/実行ログの入出力
+ - **セキュリティ**:
+   - OAuth 2.0 認証を使用。機密データ（API キー）は使用しない方針（Vertex AI は OAuth トークンを利用）。
+   - 設定値はスプレッドシート管理し、Script Properties には保存しない（最小権限・秘匿性の観点）。
+ - **前提/権限**:
+   - GCP プロジェクトで Vertex AI API 有効化
+   - 実行ユーザーに Vertex AI ユーザー相当の権限
+   - Meet の自動録画/トランスクリプトが管理者設定で有効
+   - Apps Script のスコープ許可（後述）
+
+ #### 4. 処理フロー
+ 1. トリガー起動: 時間駆動トリガーで `main()` を実行
+ 2. 設定読込: スプレッドシート「設定」シートからカレンダーID、プロンプト、追加宛先、チェック範囲（時間）を取得
+ 3. イベント取得: Calendar API で直近 CheckHours 時間内に終了したイベントを取得
+ 4. 重複防止: 「実行ログ」シートで未処理イベントのみ対象にフィルタ
+ 5. トランスクリプト取得: Meet API で会議コード/record を特定し transcripts→entries を取得（数回リトライ）
+ 6. 議事録生成: 取得テキスト＋プロンプトを Vertex AI Gemini に送信し、議事録テキストを生成
+ 7. 宛先確定: Calendar の参加者メール＋追加宛先を統合し宛先リストを作成（重複除去）
+ 8. 送信: 件名「【議事録】[会議タイトル]」、本文に議事録を設定して Gmail 送信（必要に応じて PDF 変換添付）
+ 9. ログ記録: 実行結果（イベントID、処理時刻、ステータス、エラー等）を「実行ログ」に追記
+
+ #### 5. 詳細機能
+ - **入力**: Google Calendar イベント ID（内部的に会議コードを解決）
+ - **出力（メール本文例）**:
+   ```
+   議事録: [会議タイトル]
+   日時: [YYYY-MM-DD HH:MM]
+   参加者: [リスト]
+   議題: [要約]
+   決定事項: [リスト]
+   アクションアイテム: [担当者: タスク, 期限]
+   ```
+ - **設定シート（キー/値）** 例:
+   - `CalendarId`: 監視対象カレンダーID
+   - `AdditionalRecipients`: 追加宛先（カンマ区切り）
+   - `MinutesPrompt`: Gemini に渡すプロンプト
+   - `CheckHours`: 何時間前までの終了会議を対象にするか（整数）
+ - **実行ログシート（列）** 例:
+   - `CalendarEventID`, `ProcessedAt`, `Status`, `ErrorMessage`, `MeetingTitle`
+
+ - **Gemini プロンプト例**（精度向上のため役割/出力形式/制約を明示）
+   ```
+   # 役割
+   あなたは、プロの書記です。
+
+   # 指示
+   以下の会議トランスクリプトを読み、下記のフォーマットに従って簡潔で分かりやすい日本語の議事録を作成してください。
+
+   # フォーマット
+   1. 会議の概要
+   - 会議名: (タイトル)
+   - 日時: (YYYY/MM/DD HH:MM)
+   - 参加者: (「、」区切り)
+
+   2. 決定事項
+   - ...
+
+   3. アクションアイテム
+   - 担当者: (タスク) (期限: YYYY/MM/DD)
+
+   4. 議論内容の要約
+   - ...
+
+   # 制約
+   - トランスクリプトにない情報は記載しない
+   - 記載事項がなければ「特になし」
+   - 参加者名は敬称略
+
+   # 会議トランスクリプト
+   ---
+   {transcript_text}
+   ```
+
+ #### 6. 実装方針・主要関数
+ - `main()`: 全体フローを制御
+ - `getConfig()`: 設定シート読込
+ - `getRecentEvents(calendarId, checkHours)`: 直近終了イベント取得
+ - `isProcessed(eventId) / markProcessed(...)`: 実行ログ参照/記録
+ - `getTranscriptByEvent(event)`: イベントから会議コードを解決し Meet API で transcripts→entries を取得（指数バックオフでリトライ）
+ - `generateMinutes(prompt)`: Vertex AI（OAuth）で議事録生成
+ - `collectRecipients(event, additional)`: 参加者＋追加宛先の統合
+ - `sendMinutesEmail(recipients, subject, body, options)`: メール送信
+
+ - **Vertex AI 呼び出し（OAuth、例）**
+   ```javascript
+   function generateMinutes(prompt) {
+     const PROJECT_ID = 'your-gcp-project-id';
+     const REGION = 'asia-northeast1';
+     const MODEL = 'gemini-1.5-pro-002';
+     const url = `https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/${MODEL}:generateContent`;
+
+     const payload = { contents: [{ parts: [{ text: prompt }] }] };
+     const res = UrlFetchApp.fetch(url, {
+       method: 'post',
+       contentType: 'application/json',
+       headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+       payload: JSON.stringify(payload),
+       muteHttpExceptions: true,
+     });
+     const data = JSON.parse(res.getContentText());
+     if (!res.getResponseCode || res.getResponseCode() >= 300) throw new Error(data.error?.message || 'Vertex AI error');
+     return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+   }
+   ```
+
+ - **注意**: 以前の API キー方式（`generativelanguage.googleapis.com`＋`GEMINI_API_KEY`）は本仕様では使用しない。OAuth に統一。
+
+ #### 7. スコープとトリガー
+ - **Apps Script スコープ（例）**:
+   - https://www.googleapis.com/auth/calendar.readonly
+   - https://www.googleapis.com/auth/gmail.send
+   - https://www.googleapis.com/auth/meetings.space.readonly
+   - https://www.googleapis.com/auth/drive.readonly（任意）
+   - https://www.googleapis.com/auth/script.external_request
+   - https://www.googleapis.com/auth/spreadsheets
+   - https://www.googleapis.com/auth/cloud-platform（Vertex AI 用）
+ - **トリガー**:
+   - 時間駆動（毎時/任意間隔）で `main()` を実行
+
+ #### 8. 注意点/制限
+ - **コスト**: Vertex AI は生成トークンに応じ課金（無料枠超過で費用発生）
+ - **タイムラグ**: Meet トランスクリプトは会議終了後数分〜十数分の遅延があり得るためリトライ必須
+ - **レート/サイズ**: モデル・エンドポイントのリクエスト上限/トークン上限に留意
+ - **プライバシー**: 機密情報を含む会議の取扱いに注意（最小権限、保存データの抑制）
+ - **冪等性**: 実行ログによる重複送信防止を徹底
+ - **監査/運用**: エラー通知（管理者宛メール/SLS 連携等）と定期レビューを推奨
+
+ この仕様書は基本設計です。詳細実装は要件に応じて調整してください
+```
+
+- 進捗メモ: 元ファイルを読み込み、改善案を統合した完全版に置き換え可能な本文を提示しました。元のAPIキー式のGemini呼び出しは廃止し、OAuth方式に統一。Calendar/Sheets連携、処理フロー、プロンプト例、主要関数、必要スコープを追加しました。
+
+- 要点
+  - `PropertiesService`の`GEMINI_API_KEY`使用を撤廃し、Vertex AIはOAuthで呼び出す設計に変更
+  - Google Sheetsで設定・実行ログを管理できるように仕様追記
+  - カレンダー参加者自動取得・重複処理防止・リトライ/バックオフを明記
+  - 必要スコープと関数分割方針を明示

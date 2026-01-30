@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .section {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    textarea {
+      min-height: 200px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .btn-secondary {
+      background-color: #757575;
+      color: white;
+    }
+    .btn-info {
+      background-color: #2196F3;
+      color: white;
+    }
+    .template-item {
+      padding: 10px;
+      margin: 5px 0;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .message {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    #status {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>テンプレート管理（シンプル版）</h2>
+
+  <!-- ステータス表示 -->
+  <div id="status"></div>
+
+  <!-- テンプレート一覧 -->
+  <div class="section">
+    <h3>登録済みテンプレート</h3>
+    <button onclick="loadList()">一覧を更新</button>
+    <button onclick="clearList()">表示をクリア</button>
+    <div id="templateList">
+      <p>ボタンを押して読み込んでください</p>
+    </div>
+  </div>
+
+  <!-- 新規作成 -->
+  <div class="section">
+    <h3>新規テンプレート作成</h3>
+    <button onclick="showPlaceholderHelp()" class="btn-info">利用可能な変数を表示</button>
+    <div id="placeholderHelp" style="display:none; margin: 10px 0; padding: 15px; background-color: #f0f8ff; border: 1px solid #4CAF50; border-radius: 5px;">
+      <!-- ここにプレースホルダー一覧が表示される -->
+    </div>
+    <div class="form-group">
+      <label>会議種別:</label>
+      <input type="text" id="type" value="取締役会">
+    </div>
+    <div class="form-group">
+      <label>テンプレート内容:</label>
+      <textarea id="content">{{COMPANY_NAME}}
+{{MEETING_TITLE}}議事録
+
+日時: {{YEAR}}年{{MONTH}}月{{DAY}}日 {{HOUR}}時{{MINUTE}}分
+場所: {{LOCATION}}
+議長: {{CHAIR}}
+
+1. 出席役員
+{{ATTENDING_OFFICERS}}
+
+2. 欠席役員
+{{ABSENT_OFFICERS}}
+
+3. 議事
+{{MOTIONS_BLOCK}}
+
+4. 承認
+{{APPROVALS_TABLE}}</textarea>
+    </div>
+    <button onclick="create()">テンプレート作成</button>
+    <button onclick="clearForm()">フォームをクリア</button>
+  </div>
+
+  <!-- サンプル作成 -->
+  <div class="section">
+    <h3>サンプルテンプレート</h3>
+    <button onclick="createSamples()">サンプルテンプレート一括作成</button>
+    <p>取締役会、株主総会、監査役会のテンプレートを作成します</p>
+  </div>
+
+  <script>
+    // グローバル変数
+    var isProcessing = false;
+    var placeholderVisible = false;
+
+    // プレースホルダーヘルプ表示
+    function showPlaceholderHelp() {
+      var helpDiv = document.getElementById('placeholderHelp');
+
+      if (placeholderVisible) {
+        helpDiv.style.display = 'none';
+        placeholderVisible = false;
+        return;
+      }
+
+      // 初回のみ内容を取得
+      if (!helpDiv.innerHTML || helpDiv.innerHTML.trim() === '<!-- ここにプレースホルダー一覧が表示される -->') {
+        helpDiv.innerHTML = '<p>読み込み中...</p>';
+
+        google.script.run
+          .withSuccessHandler(function(placeholders) {
+            var html = '<h4>利用可能な変数一覧</h4>';
+
+            // 基本情報
+            html += '<div style="margin: 10px 0;">';
+            html += '<strong>基本情報:</strong><ul style="margin: 5px 0;">';
+            placeholders.basic.forEach(function(p) {
+              html += '<li><code>' + p.key + '</code> - ' + p.description + '</li>';
+            });
+            html += '</ul></div>';
+
+            // 役員情報
+            html += '<div style="margin: 10px 0;">';
+            html += '<strong>役員情報:</strong><ul style="margin: 5px 0;">';
+            placeholders.officers.forEach(function(p) {
+              html += '<li><code>' + p.key + '</code> - ' + p.description + '</li>';
+            });
+            html += '</ul></div>';
+
+            // コンテンツ
+            html += '<div style="margin: 10px 0;">';
+            html += '<strong>コンテンツ:</strong><ul style="margin: 5px 0;">';
+            placeholders.content.forEach(function(p) {
+              html += '<li><code>' + p.key + '</code> - ' + p.description + '</li>';
+            });
+            html += '</ul></div>';
+
+            helpDiv.innerHTML = html;
+            helpDiv.style.display = 'block';
+            placeholderVisible = true;
+          })
+          .withFailureHandler(function(error) {
+            helpDiv.innerHTML = '<p style="color:red;">変数一覧の取得に失敗しました: ' + error + '</p>';
+            helpDiv.style.display = 'block';
+            placeholderVisible = true;
+          })
+          .getAvailablePlaceholders();
+      } else {
+        helpDiv.style.display = 'block';
+        placeholderVisible = true;
+      }
+    }
+
+    // ステータス表示
+    function showStatus(message, isError) {
+      var status = document.getElementById('status');
+      status.className = 'message ' + (isError ? 'error' : 'success');
+      status.textContent = message;
+      setTimeout(function() {
+        status.textContent = '';
+      }, 5000);
+    }
+
+    // 一覧読み込み
+    function loadList() {
+      if (isProcessing) {
+        alert('処理中です。お待ちください。');
+        return;
+      }
+
+      isProcessing = true;
+      var listDiv = document.getElementById('templateList');
+      listDiv.innerHTML = '<p>読み込み中...</p>';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          isProcessing = false;
+
+          if (!result) {
+            listDiv.innerHTML = '<p>データなし</p>';
+            return;
+          }
+
+          if (result.error) {
+            listDiv.innerHTML = '<p style="color:red;">エラー: ' + result.error + '</p>';
+            return;
+          }
+
+          if (result.templates && result.templates.length > 0) {
+            var html = '<p>登録数: ' + result.templates.length + '</p>';
+            result.templates.forEach(function(t) {
+              html += '<div class="template-item">';
+              html += '<strong>' + t.type + '</strong><br>';
+              html += 'Doc ID: ' + t.docId;
+              html += '</div>';
+            });
+            listDiv.innerHTML = html;
+          } else {
+            listDiv.innerHTML = '<p>テンプレートがありません</p>';
+          }
+        })
+        .withFailureHandler(function(error) {
+          isProcessing = false;
+          listDiv.innerHTML = '<p style="color:red;">読み込みエラー: ' + error + '</p>';
+        })
+        .getSimpleTemplateList();
+    }
+
+    // 一覧クリア
+    function clearList() {
+      document.getElementById('templateList').innerHTML = '<p>クリアしました</p>';
+    }
+
+    // テンプレート作成
+    function create() {
+      if (isProcessing) {
+        alert('処理中です。お待ちください。');
+        return;
+      }
+
+      var type = document.getElementById('type').value;
+      var content = document.getElementById('content').value;
+
+      if (!type || !content) {
+        alert('会議種別と内容を入力してください');
+        return;
+      }
+
+      isProcessing = true;
+      showStatus('作成中...', false);
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          isProcessing = false;
+          if (result && result.success) {
+            showStatus('作成成功: ' + result.type, false);
+            clearForm();
+            loadList();
+          } else {
+            showStatus('作成失敗: ' + (result ? result.error : '不明なエラー'), true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          isProcessing = false;
+          showStatus('エラー: ' + error, true);
+        })
+        .createTemplateDocument({
+          type: type,
+          content: content
+        });
+    }
+
+    // サンプル作成
+    function createSamples() {
+      if (isProcessing) {
+        alert('処理中です。お待ちください。');
+        return;
+      }
+
+      if (!confirm('サンプルテンプレートを作成しますか？')) {
+        return;
+      }
+
+      isProcessing = true;
+      showStatus('サンプル作成中...', false);
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          isProcessing = false;
+          if (result && result.success) {
+            showStatus('サンプル作成成功: ' + result.message, false);
+            loadList();
+          } else {
+            showStatus('サンプル作成失敗: ' + (result ? result.error : '不明なエラー'), true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          isProcessing = false;
+          showStatus('エラー: ' + error, true);
+        })
+        .createSampleTemplates();
+    }
+
+    // フォームクリア
+    function clearForm() {
+      document.getElementById('type').value = '';
+      document.getElementById('content').value = '';
+    }
+
+    // ページ読み込み時
+    window.onload = function() {
+      console.log('Simple Template Manager loaded');
+      // 自動読み込みはしない（ボタンで手動読み込み）
+    };
+  </script>
+</body>
+</html>

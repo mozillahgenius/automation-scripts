@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      h2 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      .file-list {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        margin-bottom: 20px;
+      }
+      .file-item {
+        padding: 10px;
+        margin: 5px 0;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .file-item:hover {
+        background-color: #f5f5f5;
+      }
+      .file-item.selected {
+        background-color: #e3f2fd;
+        border-color: #2196F3;
+      }
+      .file-name {
+        font-weight: bold;
+        color: #333;
+      }
+      .file-date {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+      }
+      .search-box {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .button-group {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .select-btn {
+        background-color: #2196F3;
+        color: white;
+      }
+      .select-btn:hover {
+        background-color: #1976D2;
+      }
+      .select-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+      .cancel-btn {
+        background-color: #f44336;
+        color: white;
+      }
+      .cancel-btn:hover {
+        background-color: #d32f2f;
+      }
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+      }
+      .error {
+        color: #f44336;
+        padding: 10px;
+        background-color: #ffebee;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>ファイルを選択</h2>
+
+      <input type="text" class="search-box" id="searchBox" placeholder="ファイル名で検索...">
+
+      <div class="file-list" id="fileList">
+        <div class="loading">ファイルを読み込み中...</div>
+      </div>
+
+      <div class="button-group">
+        <button class="cancel-btn" onclick="handleCancel()">キャンセル</button>
+        <button class="select-btn" id="selectBtn" disabled onclick="handleSelect()">選択</button>
+      </div>
+    </div>
+
+    <script>
+      let selectedFile = null;
+      let allFiles = [];
+
+      // ファイル一覧を取得
+      google.script.run.withSuccessHandler(displayFiles)
+        .withFailureHandler(showError)
+        .getRecentFiles();
+
+      function displayFiles(files) {
+        allFiles = files;
+        filterAndDisplayFiles();
+      }
+
+      function filterAndDisplayFiles() {
+        const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+        const filteredFiles = allFiles.filter(file =>
+          file.name.toLowerCase().includes(searchTerm)
+        );
+
+        const fileList = document.getElementById('fileList');
+
+        if (filteredFiles.length === 0) {
+          fileList.innerHTML = '<div class="loading">ファイルが見つかりません</div>';
+          return;
+        }
+
+        fileList.innerHTML = filteredFiles.map(file => `
+          <div class="file-item" data-id="${file.id}" onclick="selectFile(this, '${file.id}', '${file.name}')">
+            <div class="file-name">${file.name}</div>
+            <div class="file-date">最終更新: ${new Date(file.modifiedDate).toLocaleString('ja-JP')}</div>
+          </div>
+        `).join('');
+      }
+
+      function selectFile(element, id, name) {
+        // 以前の選択を解除
+        document.querySelectorAll('.file-item').forEach(item => {
+          item.classList.remove('selected');
+        });
+
+        // 新しいファイルを選択
+        element.classList.add('selected');
+        selectedFile = { id: id, name: name };
+
+        // 選択ボタンを有効化
+        document.getElementById('selectBtn').disabled = false;
+      }
+
+      function handleSelect() {
+        if (selectedFile) {
+          google.script.run.withSuccessHandler(() => {
+            google.script.host.close();
+          }).withFailureHandler(showError)
+            .setSelectedFile(selectedFile.id, selectedFile.name);
+        }
+      }
+
+      function handleCancel() {
+        google.script.host.close();
+      }
+
+      function showError(error) {
+        const fileList = document.getElementById('fileList');
+        fileList.innerHTML = `<div class="error">エラー: ${error.message}</div>`;
+      }
+
+      // 検索ボックスのイベントリスナー
+      document.getElementById('searchBox').addEventListener('input', filterAndDisplayFiles);
+    </script>
+  </body>
+</html>

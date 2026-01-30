@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .document-selector {
+      margin-bottom: 20px;
+    }
+    select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .document-info {
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
+    .document-info h3 {
+      margin-top: 0;
+      color: #4CAF50;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 10px;
+    }
+    .info-label {
+      font-weight: bold;
+      color: #666;
+    }
+    .status-summary {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px 0;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+    }
+    .summary-item {
+      text-align: center;
+    }
+    .summary-number {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .summary-label {
+      font-size: 12px;
+      color: #666;
+    }
+    .approved { color: #4CAF50; }
+    .rejected { color: #f44336; }
+    .pending { color: #FF9800; }
+    .approvals-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    .approvals-table th {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px;
+      text-align: left;
+    }
+    .approvals-table td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .approvals-table tr:hover {
+      background-color: #f5f5f5;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+    }
+    .status-approved {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .status-rejected {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    .status-pending {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+    .button-group {
+      margin-top: 20px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #45a049;
+    }
+    .btn-secondary {
+      background-color: #2196F3;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #0b7dda;
+    }
+    .btn-cancel {
+      background-color: #f44336;
+      color: white;
+    }
+    .btn-cancel:hover {
+      background-color: #da190b;
+    }
+    .loading {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4CAF50;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .error-message {
+      color: red;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid red;
+      border-radius: 4px;
+      background-color: #ffebee;
+      display: none;
+    }
+    .success-message {
+      color: green;
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid green;
+      border-radius: 4px;
+      background-color: #e8f5e9;
+      display: none;
+    }
+    .no-data {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      font-style: italic;
+    }
+    .action-buttons {
+      display: flex;
+      gap: 5px;
+    }
+    .action-btn {
+      padding: 5px 10px;
+      font-size: 12px;
+      border: 1px solid #ddd;
+      background-color: white;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .action-btn:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+  <h2>承認状況確認</h2>
+
+  <div class="document-selector">
+    <label for="docSelect">ドキュメント選択</label>
+    <select id="docSelect" onchange="loadApprovalStatus()">
+      <option value="">選択してください</option>
+    </select>
+  </div>
+
+  <div id="statusContainer" style="display: none;">
+    <div class="document-info">
+      <h3>文書情報</h3>
+      <div class="info-grid">
+        <div class="info-label">タイトル:</div>
+        <div id="docTitle">-</div>
+        <div class="info-label">会議種別:</div>
+        <div id="docMeetingType">-</div>
+        <div class="info-label">会議日:</div>
+        <div id="docMeetingDate">-</div>
+        <div class="info-label">申請者:</div>
+        <div id="docApplicant">-</div>
+        <div class="info-label">承認期限:</div>
+        <div id="docDeadline">-</div>
+        <div class="info-label">ステータス:</div>
+        <div id="docStatus">-</div>
+      </div>
+      <div style="margin-top: 10px;">
+        <a id="docUrl" href="#" target="_blank" style="color: #4CAF50;">📄 文書を開く</a>
+      </div>
+    </div>
+
+    <div class="status-summary">
+      <div class="summary-item">
+        <div class="summary-number" id="totalCount">0</div>
+        <div class="summary-label">承認者数</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-number approved" id="approvedCount">0</div>
+        <div class="summary-label">承認済</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-number rejected" id="rejectedCount">0</div>
+        <div class="summary-label">却下</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-number pending" id="pendingCount">0</div>
+        <div class="summary-label">保留中</div>
+      </div>
+    </div>
+
+    <h3>承認者詳細</h3>
+    <table class="approvals-table">
+      <thead>
+        <tr>
+          <th>承認者</th>
+          <th>状態</th>
+          <th>承認/却下日時</th>
+          <th>理由</th>
+          <th>最終通知</th>
+          <th>アクション</th>
+        </tr>
+      </thead>
+      <tbody id="approvalsTableBody">
+      </tbody>
+    </table>
+
+    <div class="button-group">
+      <button class="btn-primary" onclick="sendReminder()">リマインド送信</button>
+      <button class="btn-secondary" onclick="refreshStatus()">更新</button>
+    </div>
+  </div>
+
+  <div id="noDataMessage" class="no-data" style="display: none;">
+    ドキュメントを選択してください
+  </div>
+
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>読み込み中...</p>
+  </div>
+
+  <div id="errorMessage" class="error-message"></div>
+  <div id="successMessage" class="success-message"></div>
+
+  <div class="button-group" style="margin-top: 30px;">
+    <button class="btn-cancel" onclick="google.script.host.close()">閉じる</button>
+  </div>
+
+  <script>
+    let currentDocId = null;
+    let currentApprovals = [];
+
+    // ページ読み込み時にドキュメント一覧を取得
+    window.onload = function() {
+      google.script.run
+        .withSuccessHandler(loadDocuments)
+        .withFailureHandler(showError)
+        .getDocsList();
+    };
+
+    function loadDocuments(docs) {
+      const select = document.getElementById('docSelect');
+
+      // 承認待ちまたは承認済みのドキュメントのみ表示
+      const approvalDocs = docs.filter(doc =>
+        doc.status === '承認待ち' ||
+        doc.status === '承認済' ||
+        doc.status === '差戻し' ||
+        doc.status === '期限超過（未承認）'
+      );
+
+      if (approvalDocs.length === 0) {
+        select.innerHTML = '<option value="">承認対象のドキュメントがありません</option>';
+        return;
+      }
+
+      approvalDocs.forEach(doc => {
+        const option = document.createElement('option');
+        option.value = doc.docId;
+        option.textContent = `${doc.title} (${doc.meetingType} - ${doc.meetingDate}) - ${doc.status}`;
+        select.appendChild(option);
+      });
+    }
+
+    function loadApprovalStatus() {
+      const docId = document.getElementById('docSelect').value;
+
+      if (!docId) {
+        document.getElementById('statusContainer').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'block';
+        return;
+      }
+
+      currentDocId = docId;
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(displayApprovalStatus)
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showError('データ取得エラー: ' + error.toString());
+        })
+        .getApprovalStatus(docId);
+    }
+
+    function displayApprovalStatus(data) {
+      showLoading(false);
+
+      if (!data || !data.docInfo) {
+        showError('データが見つかりません');
+        return;
+      }
+
+      // 文書情報を表示
+      document.getElementById('docTitle').textContent = data.docInfo.title || '-';
+      document.getElementById('docMeetingType').textContent = data.docInfo.meetingType || '-';
+      document.getElementById('docMeetingDate').textContent = data.docInfo.meetingDate || '-';
+      document.getElementById('docApplicant').textContent = data.docInfo.applicant || '-';
+      document.getElementById('docDeadline').textContent = data.docInfo.deadline ?
+        formatDate(data.docInfo.deadline) : '期限なし';
+      document.getElementById('docStatus').textContent = data.docInfo.status || '-';
+
+      const docUrl = document.getElementById('docUrl');
+      if (data.docInfo.url) {
+        docUrl.href = data.docInfo.url;
+        docUrl.style.display = 'inline';
+      } else {
+        docUrl.style.display = 'none';
+      }
+
+      // サマリーを表示
+      document.getElementById('totalCount').textContent = data.summary.total;
+      document.getElementById('approvedCount').textContent = data.summary.approved;
+      document.getElementById('rejectedCount').textContent = data.summary.rejected;
+      document.getElementById('pendingCount').textContent = data.summary.pending;
+
+      // 承認者テーブルを表示
+      const tbody = document.getElementById('approvalsTableBody');
+      tbody.innerHTML = '';
+
+      currentApprovals = data.approvals;
+
+      if (data.approvals.length === 0) {
+        const row = tbody.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 6;
+        cell.className = 'no-data';
+        cell.textContent = '承認者が設定されていません';
+      } else {
+        data.approvals.forEach(approval => {
+          const row = tbody.insertRow();
+
+          // 承認者
+          row.insertCell().textContent = approval.email;
+
+          // 状態
+          const statusCell = row.insertCell();
+          const statusBadge = document.createElement('span');
+          statusBadge.className = 'status-badge';
+
+          switch (approval.status) {
+            case 'APPROVED':
+              statusBadge.textContent = '承認済';
+              statusBadge.classList.add('status-approved');
+              break;
+            case 'REJECTED':
+              statusBadge.textContent = '却下';
+              statusBadge.classList.add('status-rejected');
+              break;
+            case 'PENDING':
+              statusBadge.textContent = '保留中';
+              statusBadge.classList.add('status-pending');
+              break;
+          }
+          statusCell.appendChild(statusBadge);
+
+          // 承認日時
+          row.insertCell().textContent = approval.approvalDate ?
+            formatDateTime(approval.approvalDate) : '-';
+
+          // 理由
+          row.insertCell().textContent = approval.rejectReason || '-';
+
+          // 最終通知
+          row.insertCell().textContent = approval.lastNotificationDate ?
+            formatDateTime(approval.lastNotificationDate) : '未送信';
+
+          // アクション
+          const actionCell = row.insertCell();
+          if (approval.status === 'PENDING') {
+            const actionButtons = document.createElement('div');
+            actionButtons.className = 'action-buttons';
+
+            const resendBtn = document.createElement('button');
+            resendBtn.className = 'action-btn';
+            resendBtn.textContent = '再送信';
+            resendBtn.onclick = () => resendNotification(approval.email);
+
+            actionButtons.appendChild(resendBtn);
+            actionCell.appendChild(actionButtons);
+          } else {
+            actionCell.textContent = '-';
+          }
+        });
+      }
+
+      document.getElementById('statusContainer').style.display = 'block';
+      document.getElementById('noDataMessage').style.display = 'none';
+    }
+
+    function sendReminder() {
+      if (!currentDocId) {
+        showError('ドキュメントが選択されていません');
+        return;
+      }
+
+      const pendingApprovers = currentApprovals.filter(a => a.status === 'PENDING');
+      if (pendingApprovers.length === 0) {
+        showError('リマインド対象者がいません');
+        return;
+      }
+
+      if (!confirm(`${pendingApprovers.length}名の未承認者にリマインドを送信しますか？`)) {
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showSuccess(result.message);
+            loadApprovalStatus(); // 再読み込み
+          } else {
+            showError(result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showError('リマインド送信エラー: ' + error.toString());
+        })
+        .sendApprovalRequests(currentDocId, '承認期限が近づいています。早めの対応をお願いします。');
+    }
+
+    function resendNotification(email) {
+      if (!confirm(`${email} に承認依頼を再送信しますか？`)) {
+        return;
+      }
+
+      showLoading(true);
+      hideMessages();
+
+      // 個別送信の実装（簡易版）
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (result.success) {
+            showSuccess(`${email} に通知を送信しました`);
+            loadApprovalStatus(); // 再読み込み
+          } else {
+            showError(result.error);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          showError('通知送信エラー: ' + error.toString());
+        })
+        .sendApprovalNotification(
+          email,
+          currentDocId,
+          { url: document.getElementById('docUrl').href,
+            title: document.getElementById('docTitle').textContent,
+            deadline: document.getElementById('docDeadline').textContent
+          },
+          '承認依頼の再送信です。確認をお願いします。',
+          false
+        );
+    }
+
+    function refreshStatus() {
+      if (currentDocId) {
+        loadApprovalStatus();
+      }
+    }
+
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ja-JP');
+    }
+
+    function formatDateTime(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleString('ja-JP');
+    }
+
+    function showLoading(show) {
+      document.querySelector('.loading').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      setTimeout(() => {
+        successDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function hideMessages() {
+      document.getElementById('errorMessage').style.display = 'none';
+      document.getElementById('successMessage').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

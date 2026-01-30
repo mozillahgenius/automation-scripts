@@ -1,0 +1,251 @@
+/**
+ * 「フォーム形式の回答」シートに新しい行が追加されたら
+ * 「チャンネル名」シートにコピーして採番する
+ *
+ * トリガー設定: 編集 → 現在のプロジェクトのトリガー → onChange → スプレッドシートから → 変更時
+ */
+function onChange(e) {
+  // 行挿入以外は無視
+  if (e.changeType !== 'INSERT_ROW' && e.changeType !== 'EDIT') {
+    return;
+  }
+
+  processNewEntry();
+}
+
+/**
+ * 「フォーム形式の回答」シートの最新行を処理する
+ * 手動実行も可能
+ */
+function processNewEntry() {
+  const SOURCE_SHEET = 'フォーム形式の回答';
+  const TARGET_SHEET = 'チャンネル名';
+  const HEADER_ROWS = 1;
+  const COL_PURPOSE = 1; // A: 用途
+  const COL_NUMBER = 4;  // D: チャンネル番号
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sourceSheet = ss.getSheetByName(SOURCE_SHEET);
+  const targetSheet = ss.getSheetByName(TARGET_SHEET);
+
+  if (!sourceSheet || !targetSheet) {
+    Logger.log('エラー: シートが見つかりません');
+    return;
+  }
+
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+
+  try {
+    const sourceLastRow = sourceSheet.getLastRow();
+    if (sourceLastRow <= HEADER_ROWS) {
+      Logger.log('フォーム形式の回答シートにデータがありません');
+      return;
+    }
+
+    // フォーム形式の回答シートの最新行からデータを取得
+    // A列: チャンネルの用途, B列: チャンネル名
+    const colA = sourceSheet.getRange(sourceLastRow, 1).getValue(); // 用途
+    const colB = sourceSheet.getRange(sourceLastRow, 2).getValue(); // チャンネル名
+
+    Logger.log('新規データ検出: 用途=' + colA + ', チャンネル名=' + colB);
+
+    if (!colA) {
+      Logger.log('用途が空のためスキップ');
+      return;
+    }
+
+    // 既に処理済みかチェック（チャンネル名シートに同じデータがあるか）
+    const targetLastRow = targetSheet.getLastRow();
+    if (targetLastRow > HEADER_ROWS) {
+      const existingData = targetSheet
+        .getRange(HEADER_ROWS + 1, 1, targetLastRow - HEADER_ROWS, 2)
+        .getValues();
+
+      for (const row of existingData) {
+        if (row[0] === colA && row[1] === colB) {
+          Logger.log('既に処理済みのデータです');
+          return;
+        }
+      }
+    }
+
+    // 書き込み先行を決定
+    let targetRow;
+    if (targetLastRow <= HEADER_ROWS) {
+      targetRow = HEADER_ROWS + 1;
+    } else {
+      // A列が空欄の行を探す
+      const aColValues = targetSheet
+        .getRange(HEADER_ROWS + 1, COL_PURPOSE, targetLastRow - HEADER_ROWS, 1)
+        .getValues()
+        .flat();
+
+      targetRow = -1;
+      for (let i = 0; i < aColValues.length; i++) {
+        if (aColValues[i] === '' || aColValues[i] === null) {
+          targetRow = HEADER_ROWS + 1 + i;
+          break;
+        }
+      }
+
+      if (targetRow === -1) {
+        targetRow = targetLastRow + 1;
+      }
+    }
+
+    Logger.log('書き込み先行: ' + targetRow);
+
+    // A列とB列にデータをコピー
+    targetSheet.getRange(targetRow, 1).setValue(colA);
+    targetSheet.getRange(targetRow, 2).setValue(colB);
+
+    // 採番処理
+    const purpose = String(colA).trim();
+    const numCell = targetSheet.getRange(targetRow, COL_NUMBER);
+    const [minN, maxN] = rangeByPurpose_(purpose);
+
+    Logger.log('番号範囲: ' + minN + '〜' + maxN);
+
+    // 既存番号から最大を探す
+    let currentMax = minN - 1;
+    if (targetLastRow > HEADER_ROWS) {
+      const allValues = targetSheet
+        .getRange(HEADER_ROWS + 1, COL_NUMBER, targetLastRow - HEADER_ROWS, 1)
+        .getValues()
+        .flat();
+
+      for (const v of allValues) {
+        if (typeof v === 'number' && v >= minN && v <= maxN) {
+          if (v > currentMax) currentMax = v;
+        }
+      }
+    }
+
+    const nextN = currentMax + 1;
+    Logger.log('次の番号: ' + nextN);
+
+    if (nextN > maxN) {
+      numCell.setValue('OVER_RANGE');
+      Logger.log('警告: 番号範囲を超えました');
+    } else {
+      numCell.setValue(nextN);
+      Logger.log('採番完了: ' + nextN);
+    }
+
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 「フォーム形式の回答」シートが編集されたら処理する
+ * トリガー設定: 編集 → 現在のプロジェクトのトリガー → onEdit → スプレッドシートから → 編集時
+ */
+function onEdit(e) {
+  const sh = e.range.getSheet();
+
+  // 「フォーム形式の回答」シートの編集時
+  if (sh.getName() === 'フォーム形式の回答') {
+    // A列（用途）が編集された場合のみ処理
+    if (e.range.getColumn() === 1 && e.range.getRow() > 1) {
+      Logger.log('フォーム形式の回答シートに新規データ検出');
+      processNewEntry();
+    }
+    return;
+  }
+
+  // 「チャンネル名」シートの編集時（手動編集対応）
+  if (sh.getName() === 'チャンネル名') {
+    handleChannelSheetEdit(e);
+  }
+}
+
+/**
+ * 「チャンネル名」シートの手動編集時の採番処理
+ */
+function handleChannelSheetEdit(e) {
+  const HEADER_ROWS = 1;
+  const COL_PURPOSE = 1;
+  const COL_NUMBER = 4;
+
+  const sh = e.range.getSheet();
+  const row = e.range.getRow();
+  const col = e.range.getColumn();
+
+  if (row <= HEADER_ROWS) return;
+  if (col !== COL_PURPOSE) return;
+
+  const purpose = String(sh.getRange(row, COL_PURPOSE).getValue() || '').trim();
+  if (!purpose) return;
+
+  const numCell = sh.getRange(row, COL_NUMBER);
+  const current = numCell.getValue();
+
+  if (typeof current === 'number' && current >= 0) return;
+  if (current === 'OVER_RANGE') return;
+
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+
+  try {
+    const recheck = numCell.getValue();
+    if (typeof recheck === 'number' && recheck >= 0) return;
+    if (recheck === 'OVER_RANGE') return;
+
+    const [minN, maxN] = rangeByPurpose_(purpose);
+    const lastRow = sh.getLastRow();
+    let currentMax = minN - 1;
+
+    if (lastRow > HEADER_ROWS) {
+      const values = sh
+        .getRange(HEADER_ROWS + 1, COL_NUMBER, lastRow - HEADER_ROWS, 1)
+        .getValues()
+        .flat();
+
+      for (const v of values) {
+        if (typeof v === 'number' && v >= minN && v <= maxN) {
+          if (v > currentMax) currentMax = v;
+        }
+      }
+    }
+
+    const nextN = currentMax + 1;
+
+    if (nextN > maxN) {
+      numCell.setValue('OVER_RANGE');
+    } else {
+      numCell.setValue(nextN);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * 用途に応じた番号範囲を返す
+ */
+function rangeByPurpose_(purpose) {
+  switch (purpose) {
+    case 'デフォルト':
+    case 'デフォルトチャンネル':
+      return [0, 99];
+    case '組織':
+      return [100, 199];
+    case 'プロジェクト':
+      return [200, 899];
+    case 'プライベート':
+      return [900, 999];
+    default:
+      Logger.log('警告: 未知の用途「' + purpose + '」- デフォルト範囲を使用');
+      return [0, 99];
+  }
+}
+
+/**
+ * 手動テスト用
+ */
+function testProcessNewEntry() {
+  processNewEntry();
+  Logger.log('テスト完了');
+}

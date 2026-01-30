@@ -1,0 +1,1475 @@
+/**
+ * Slack AI Bot - 統合版（完全版）
+ * 
+ * このファイルは以下のモジュールを統合したものです：
+ * - 設定管理とユーティリティ
+ * - Slack Bot基本クラス
+ * - メインエントリポイント
+ * - FAQ検索とDrive検索機能
+ * - 自然言語処理
+ * - 文字列処理ユーティリティ
+ * - ログ機能
+ * - ファイル処理機能（PDF、Word、Googleドキュメント）
+ * - ドキュメント編集・修正案作成機能
+ */
+
+// ===========================
+// 設定管理とユーティリティ
+// ===========================
+
+/**
+ * 環境変数取得
+ */
+function Settings() {
+  const env = ScriptProperties.getProperties();
+  return {
+    ...env,
+  };
+}
+
+/**
+ * ログ出力
+ */
+function Log(title, text) {
+  Logger.log(title, text);
+}
+
+// ===========================
+// ログシート管理
+// ===========================
+
+var SheetLog = {
+  log: function(message) {
+    const as = SpreadsheetApp.getActiveSpreadsheet();
+    try {
+      const logSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('log');
+      var now = new Date();    
+      logSheet.appendRow([now, message]);
+    } catch(e) {
+    }
+  }
+}
+
+// ===========================
+// 文字列処理ユーティリティ
+// ===========================
+
+function katakanaToHiragana(text) {
+  return text.replace(/[\u30a1-\u30f6]/g, function(match) {
+    // カタカナの文字コードからひらがなの文字コードへ変換
+    var chr = match.charCodeAt(0) - 0x60;
+    return String.fromCharCode(chr);
+  });
+}
+
+function toHalfWidth(str) {
+  // 全角英数字を半角に変換
+  str = str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+  });
+  return str;
+}
+
+// ===========================
+// Slack Bot クラス
+// ===========================
+
+class SlackBot {
+  constructor(e) {
+    this.requestEvent = e;
+    this.postData = null;
+    this.slackEvent = null;
+    this.responseData = this.init();
+    this.verification();
+  }
+
+  responseJsonData(json) {
+    return ContentService.createTextOutput(JSON.stringify(json)).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  init() {
+    const e = this.requestEvent;
+    if (!e?.postData) return { error: 'postData is missing or undefined.', request: JSON.stringify(e, null, "  ") };
+    this.postData = e.postData;
+    if (!this.postData?.type) return { error: 'postData type is missing or undefined.', request: JSON.stringify(this.postData, null, "  ") };
+    try { var event = JSON.parse(this.postData.contents); }
+    catch (error) {
+      event = e.parameter?.command && e.parameter?.text ? { event: { type: "command", event: { ...e.parameter } } } : { error: 'Invalid JSON format in postData contents.', request: this.postData };
+    }
+    this.slackEvent = event;
+    return event?.event ? null : { error: 'Slack event is missing or undefined.', request: JSON.stringify(e, null, "  ") };
+  }
+
+  verification() {
+    //SheetLog.log(JSON.stringify(this.postData));
+    if (!this.postData || this.responseData) return null;
+    if (this.postData.type !== 'url_verification') return null;
+    this.responseData = { "challenge": this.postData.challenge };
+    return this.responseData;
+  }
+
+  hasCache(key) {
+    if (!key) return true;
+    const cache = CacheService.getScriptCache();
+    const cached = cache.get(key);
+    if (cached) return true;
+    cache.put(key, true, 30 * 60);
+    return false;
+  }
+
+  handleEvent(type, callback = () => { }) {
+    if (!this.slackEvent || this.responseData || this.slackEvent?.event?.type !== type) return null;
+    const callbackResponse = callback({ event: this.slackEvent.event });
+    if (!callbackResponse) return null;
+    this.responseData = callbackResponse;
+    return callbackResponse;
+  }
+
+  handleBase(type, targetType, callback = () => {}) {
+    return this.handleEvent(type, ({ event }) => {
+      const { text: message, channel, thread_ts: threadTs, ts, client_msg_id, bot_id, app_id } = event;
+      if (bot_id || app_id) return null;
+      if (event.type !== targetType || this.hasCache(`${channel}:${client_msg_id}`)) return null;
+      return callback ? callback({ message, channel, threadTs: threadTs ?? ts, event }) : null;
+    });
+  }
+
+  handleMessageEventBase(callback) { 
+    return this.handleBase("message", "message", callback); 
+  }
+  
+  handleMentionEventBase(callback) { 
+    return this.handleBase("app_mention", "app_mention", callback); 
+  }
+  
+  handleReactionEventBase(callback) { 
+    return this.handleBase("reaction_added", "reaction_added", callback); 
+  }
+
+  response() {
+    Logger.log(this.responseData);
+    return this.responseData && this.responseJsonData(this.responseData);
+  }
+}
+
+// ===========================
+// Slack API 関連機能
+// ===========================
+
+/**
+ * チャンネル情報取得
+ */
+function getChannelInfo(channelId) {
+  const url = 'https://slack.com/api/conversations.info';
+  const config = Settings();
+  if (!config?.SLACK_TOKEN) return;
+  const payload = {
+    token: config.SLACK_TOKEN,
+    channel: channelId,
+  };
+  const options = {
+    method: 'post',
+    payload,
+  };
+  const response = UrlFetchApp.fetch(url, options);
+  const data = JSON.parse(response.getContentText());
+  return data.channel;
+}
+
+/**
+ * スレッドメッセージ取得
+ */
+function getThreadMessages(channelId, threadTs) {
+  const url = 'https://slack.com/api/conversations.replies';
+  const config = Settings();
+  if (!config?.SLACK_TOKEN) return [];
+  const payload = {
+    token: config.SLACK_TOKEN,
+    channel: channelId,
+    ts: threadTs,
+  };
+  const options = {
+    method: 'get',
+    payload,
+  };
+  const response = UrlFetchApp.fetch(url, options);
+  const data = JSON.parse(response.getContentText());
+  return data.messages || [];
+}
+
+/**
+ * メッセージ送信
+ */
+function postMessage(message, channel, threadTs = null) {
+  const url = 'https://slack.com/api/chat.postMessage';
+  const config = Settings();
+  if (!config?.SLACK_TOKEN) return;
+  const payload = {
+    token: config.SLACK_TOKEN,
+    channel: channel,
+    unfurl_links: true,
+    text: message,
+    ...(threadTs ? { thread_ts: threadTs } : {}),
+  };
+  UrlFetchApp.fetch(url, { method: 'post', payload });
+}
+
+// ===========================
+// 自然言語処理 (Google Natural Language API)
+// ===========================
+
+/**
+ * Google Natural Language API alnalyzeSyntax
+ */
+function gNL(textdata) {
+  var apiKey = ScriptProperties.getProperty('GOOGLE_NL_API');  // ここに取得したAPIキーを入れる
+  //形態素解析（品詞取得） = analyzeSyntax
+  var url = "https://language.googleapis.com/v1/documents:analyzeSyntax?key=" + apiKey;
+  var payload = {
+    document: {
+      type: "PLAIN_TEXT",
+      content: textdata
+    },
+    encodingType: "UTF8"
+  };  
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload)
+  };
+  
+  var response = UrlFetchApp.fetch(url, options);
+  //SheetLog.log('NL:' + response.getContentText());
+  //Logger.log(response.getContentText());
+  try {
+    return JSON.parse(response.getContentText());  
+  } catch(e) {
+    Logger.log(response.getContentText());
+    Logger.log(e);
+    return null;
+  }
+}
+
+/**
+ * Google Natural Language API の戻り値より必要なものを抽出する
+ * 品詞の場合は tagsの欄に ['NOUN','NUM','NUMBER']
+ * https://cloud.google.com/natural-language/docs/morphology?hl=ja
+ */
+function filterGNL(gNLobj, tags) {
+  if (!gNLobj) return [];
+  var words = gNLobj.tokens
+    .filter(token => tags.includes(token.partOfSpeech.tag)) // 配列内の品詞と一致するものを抽出
+    .map(token => token.text.content); 
+  return words;
+}
+
+// ===========================
+// FAQ検索機能
+// ===========================
+
+/**
+ * FAQロールを取得
+ */
+function getFaqRole(question) {
+  try {
+    const morpths = filterGNL(gNL(question), ['NOUN', 'NUM', 'NUMBER']);
+    let words = [];
+    for (let i = 0; i < morpths.length; i++) {
+      let d = katakanaToHiragana(
+        toHalfWidth(morpths[i]).toLowerCase().replace(',', '')
+      );
+      if (d.indexOf('-')) {
+        const arr = morpths[i].split('-');
+        for (let n = 0; n < arr.length; n++) {
+          words.push(
+            katakanaToHiragana(
+              toHalfWidth(arr[n]).toLowerCase().replace(',', '')
+            )
+          );
+        }
+        continue;
+      }
+      words.push(d);
+    }
+
+    const faqs = SpreadsheetApp.getActive()
+      .getSheetByName('faq')
+      .getRange('A:B')
+      .getValues()
+      .filter((row) => !row.every((cell) => cell.trim() === ''));
+    let sfaqs = [], result = [];
+    for (let i = 1; i < faqs.length; i++) {
+      sfaqs[i] = faqs[i].map((cell) =>
+        katakanaToHiragana(toHalfWidth(cell).toLowerCase().replace(',', ''))
+      );
+    }
+    for (let i = 1; i < sfaqs.length; i++) {
+      if (sfaqs[i].some((faq) => words.some((w) => faq.includes(w)))) {
+        if (result.length === 0) result.push(faqs[0]);
+        result.push(faqs[i]);
+      }
+    }
+    if (!result.length) return null;
+    return {
+      role: 'system',
+      content:
+        '今から記載するJSON形式のFAQを踏まえて回答を望む(FAQの回答とは言わない)' +
+        JSON.stringify(result),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * スレッド履歴とロールをマージ
+ */
+function mergeRoleAndThread(optionRole, threadMessages) {
+  for (let i = 0; i < threadMessages.length; i++) {
+    optionRole.push({
+      role: threadMessages[i].hasOwnProperty('app_id') ? 'assistant' : 'user',
+      content: threadMessages[i].text || '',
+    });
+  }
+}
+
+// ===========================
+// Drive検索機能
+// ===========================
+
+/**
+ * FAQシートの A列キーワード、C列チェックを元に、
+ * ドライブ一覧シート A列のすべてのフォルダIDを検索対象として
+ * 指定キーワードの含まれるファイル本文／行を抜き出し、
+ * D列に結果をリッチテキストで書き出します。
+ *
+ * B列の手動回答はそのまま残し、FAQシートの構造は変更しません。
+ */
+function updateFaqDriveResults() {
+  const ss             = SpreadsheetApp.getActive();
+  const faqSheet       = ss.getSheetByName('faq');
+  const driveListSheet = ss.getSheetByName('ドライブ一覧');
+  const lastFaqRow     = faqSheet.getLastRow();
+  const lastDriveRow   = driveListSheet.getLastRow();
+  if (lastFaqRow < 2 || lastDriveRow < 2) return;
+
+  // ドライブ一覧シート A2:A に書かれたフォルダIDを取得
+  const folderIds = driveListSheet
+    .getRange(`A2:A${lastDriveRow}`)
+    .getValues()
+    .flat()
+    .filter(id => id);
+
+  // FAQシートの A列キーワード、C列検索フラグを取得
+  const faqData = faqSheet.getRange(`A2:C${lastFaqRow}`).getValues();
+
+  faqData.forEach((row, i) => {
+    const [ keyword, /*manualAnswer*/, doSearch ] = row;
+    const rowNum = i + 2;
+    const resultCell = faqSheet.getRange(rowNum, 4); // D列
+
+    if (doSearch === true) {
+      // C列が TRUE の場合のみ、全フォルダを検索して結果をまとめる
+      let allResults = [];
+      folderIds.forEach(folderId => {
+        const res = searchDriveLinkReturn(keyword, folderId);
+        allResults = allResults.concat(res);
+      });
+      // 抜き出した結果を D列に書き込む
+      if (allResults.length) {
+        cellSetLink(resultCell, allResults);
+      } else {
+        resultCell.setValue('該当ファイルが見つかりませんでした');
+      }
+    } else {
+      // C列が FALSE の場合は D列をクリア
+      resultCell.clearContent();
+    }
+  });
+}
+
+/**
+ * Drive API で指定フォルダ内を全文検索し、
+ * ファイルごとに段落／行を抜き出して配列で返す
+ * @returns Array<{file: Object, snippets: string[]}>
+ */
+function searchDriveLinkReturn(keyword, folderId) {
+  const ret = [];
+  const baseUrl = 'https://www.googleapis.com/drive/v3/files';
+  const params = {
+    q:                          `\'${folderId}\' in parents and trashed = false and fullText contains '${keyword}'`,
+    corpora:                    'allDrives',
+    includeItemsFromAllDrives:  true,
+    supportsAllDrives:          true,
+    fields:                     'files(id,name,mimeType,webViewLink)'
+  };
+  const query = Object.entries(params)
+    .map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  const url = `${baseUrl}?${query}`;
+
+  const response = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }
+  });
+  const files = JSON.parse(response.getContentText()).files || [];
+
+  files.forEach(file => {
+    let snippets = [];
+    try {
+      if (file.mimeType === 'application/vnd.google-apps.document') {
+        snippets = extractSnippetFromDoc(file.id, keyword);
+      } else if (file.mimeType === 'application/vnd.google-apps.spreadsheet') {
+        snippets = extractSnippetFromSheet(file.id, keyword);
+      } else if (file.mimeType === 'application/pdf') {
+        // PDF を Docs に変換して抜き出す
+        const blob      = DriveApp.getFileById(file.id).getBlob();
+        const tmpFile   = DriveApp.createFile(blob).setName('temp');
+        const resource  = { title: 'temp-doc', mimeType: MimeType.GOOGLE_DOCS };
+        const converted = Drive.Files.insert(resource, tmpFile.getBlob());
+        snippets        = extractSnippetFromDoc(converted.id, keyword);
+        DriveApp.getFileById(converted.id).setTrashed(true);
+        tmpFile.setTrashed(true);
+      }
+    } catch (e) {
+      Logger.log(`処理エラー (${file.name}): ${e}`);
+    }
+    if (snippets.length > 0) {
+      ret.push({ file: file, snippets: snippets });
+    }
+  });
+
+  return ret;
+}
+
+/**
+ * Googleドキュメントからキーワードを含む段落を抽出
+ */
+function extractSnippetFromDoc(docId, keyword) {
+  const paras = DocumentApp.openById(docId).getBody().getParagraphs();
+  return paras
+    .map(p => p.getText().trim())
+    .filter(t => t.includes(keyword));
+}
+
+/**
+ * スプレッドシートからキーワードを含む行を抽出 (タブ区切り)
+ */
+function extractSnippetFromSheet(sheetId, keyword) {
+  const rows = SpreadsheetApp.openById(sheetId)
+    .getSheets()
+    .flatMap(sh => sh.getDataRange().getValues());
+  return rows
+    .filter(r => r.some(c => c.toString().includes(keyword)))
+    .map(r => r.join('\t'));
+}
+
+/**
+ * 結果をリッチテキスト (リンク付き) でセルに書き込む
+ */
+function cellSetLink(range, data) {
+  const maxLen = 5000;
+  let text     = '';
+  const links  = [];
+
+  data.forEach(item => {
+    const nameBlock    = item.file.name + '\n';
+    const snippetBlock = item.snippets
+      .slice(0, 2)
+      .map(s => s.replace(/\t/g,' ').replace(/\n/g,' ').trim())
+      .join('\n') + '\n';
+
+    let block = nameBlock + snippetBlock;
+    if (text.length + block.length > maxLen) {
+      block = block.substring(0, maxLen - text.length);
+    }
+
+    const start = text.length;
+    text += block;
+    const end   = start + nameBlock.length;
+    if (end <= maxLen) {
+      links.push({ start, end, url: item.file.webViewLink });
+    }
+  });
+
+  const builder = SpreadsheetApp.newRichTextValue().setText(text);
+  links.forEach(l => builder.setLinkUrl(l.start, l.end, l.url));
+  range.setRichTextValue(builder.build());
+}
+
+// ===========================
+// ファイル処理機能
+// ===========================
+
+/**
+ * Slackイベントからファイル情報を取得して処理
+ */
+function handleFileShared(event, channel) {
+  const files = event.files || [];
+  if (files.length === 0) return null;
+  
+  const results = [];
+  
+  files.forEach(file => {
+    try {
+      const fileContent = downloadAndProcessFile(file);
+      if (fileContent) {
+        results.push({
+          name: file.name,
+          type: file.mimetype,
+          content: fileContent
+        });
+      }
+    } catch (e) {
+      Logger.log(`ファイル処理エラー: ${file.name} - ${e.toString()}`);
+      results.push({
+        name: file.name,
+        type: file.mimetype,
+        error: `ファイル処理中にエラーが発生しました: ${e.toString()}`
+      });
+    }
+  });
+  
+  return results;
+}
+
+/**
+ * Slackからファイルをダウンロードして処理
+ */
+function downloadAndProcessFile(file) {
+  const config = Settings();
+  if (!config?.SLACK_TOKEN) return null;
+  
+  // Slack APIを使用してファイルをダウンロード
+  const downloadUrl = file.url_private_download || file.url_private;
+  
+  const options = {
+    method: 'get',
+    headers: {
+      'Authorization': 'Bearer ' + config.SLACK_TOKEN
+    },
+    muteHttpExceptions: true
+  };
+  
+  const response = UrlFetchApp.fetch(downloadUrl, options);
+  const blob = response.getBlob();
+  
+  // ファイルタイプに応じて処理
+  const mimeType = file.mimetype;
+  
+  if (mimeType === 'application/pdf') {
+    return processPDF(blob);
+  } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+             mimeType === 'application/msword') {
+    return processWord(blob);
+  } else if (mimeType === 'text/plain') {
+    return blob.getDataAsString();
+  } else if (file.name && file.name.includes('docs.google.com')) {
+    // GoogleドキュメントのURLの場合
+    return processGoogleDoc(file.url_private);
+  } else {
+    return `ファイルタイプ ${mimeType} はサポートされていません。`;
+  }
+}
+
+/**
+ * PDFファイルを処理
+ */
+function processPDF(blob) {
+  try {
+    // PDFをGoogle Docsに変換して読み取る
+    const resource = {
+      title: 'temp-pdf-' + Utilities.getUuid(),
+      mimeType: MimeType.GOOGLE_DOCS
+    };
+    
+    // Drive APIを使用してPDFをGoogle Docsに変換
+    const file = Drive.Files.insert(resource, blob, {
+      ocr: true,
+      ocrLanguage: 'ja'
+    });
+    
+    // 変換されたドキュメントからテキストを抽出
+    const doc = DocumentApp.openById(file.id);
+    const text = doc.getBody().getText();
+    
+    // 一時ファイルを削除
+    DriveApp.getFileById(file.id).setTrashed(true);
+    
+    return text;
+  } catch (e) {
+    Logger.log('PDF処理エラー: ' + e.toString());
+    throw new Error('PDFの読み取りに失敗しました: ' + e.toString());
+  }
+}
+
+/**
+ * Wordファイルを処理
+ */
+function processWord(blob) {
+  try {
+    // WordファイルをGoogle Docsに変換
+    const resource = {
+      title: 'temp-word-' + Utilities.getUuid(),
+      mimeType: MimeType.GOOGLE_DOCS
+    };
+    
+    // Drive APIを使用してWordをGoogle Docsに変換
+    const file = Drive.Files.insert(resource, blob);
+    
+    // 変換されたドキュメントからテキストを抽出
+    const doc = DocumentApp.openById(file.id);
+    const text = doc.getBody().getText();
+    
+    // 一時ファイルを削除
+    DriveApp.getFileById(file.id).setTrashed(true);
+    
+    return text;
+  } catch (e) {
+    Logger.log('Word処理エラー: ' + e.toString());
+    throw new Error('Wordファイルの読み取りに失敗しました: ' + e.toString());
+  }
+}
+
+/**
+ * GoogleドキュメントのURLから内容を取得
+ */
+function processGoogleDoc(url) {
+  try {
+    // URLからドキュメントIDを抽出
+    const docIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!docIdMatch) {
+      throw new Error('Google ドキュメントのIDが見つかりません');
+    }
+    
+    const docId = docIdMatch[1];
+    
+    // ドキュメントを開いてテキストを取得
+    const doc = DocumentApp.openById(docId);
+    const text = doc.getBody().getText();
+    
+    return text;
+  } catch (e) {
+    Logger.log('Google Docs処理エラー: ' + e.toString());
+    throw new Error('Google ドキュメントの読み取りに失敗しました: ' + e.toString());
+  }
+}
+
+/**
+ * ファイル付きメッセージのハンドラ
+ */
+function handleMessageWithFiles(event) {
+  const { text, channel, thread_ts, ts, files } = event;
+  
+  if (!files || files.length === 0) {
+    return null;
+  }
+  
+  // ファイルを処理
+  const fileResults = handleFileShared(event, channel);
+  
+  // ファイル内容を含めて応答を生成
+  if (fileResults && fileResults.length > 0) {
+    const fileContents = fileResults.map(r => r.content || r.error).join('\n\n');
+    
+    // ファイル内容を含めたコンテキストを作成
+    const context = {
+      userMessage: text || 'ファイルが添付されました',
+      fileContents: fileContents,
+      fileInfo: fileResults.map(r => ({
+        name: r.name,
+        type: r.type
+      }))
+    };
+    
+    return context;
+  }
+  
+  return null;
+}
+
+// ===========================
+// ドキュメント編集・修正案作成機能
+// ===========================
+
+/**
+ * ドキュメントを処理して修正案を作成
+ */
+function processDocumentForReview(file, userMessage, channel) {
+  try {
+    let docId = null;
+    let originalFileName = '';
+    
+    // ファイルタイプに応じて処理
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+        file.mimetype === 'application/msword') {
+      // Wordファイルの場合
+      const result = convertWordToGoogleDoc(file);
+      docId = result.docId;
+      originalFileName = file.name;
+    } else if (file.url_private && file.url_private.includes('docs.google.com')) {
+      // GoogleドキュメントのURLの場合
+      const originalDocId = extractDocIdFromUrl(file.url_private);
+      docId = copyGoogleDoc(originalDocId);
+      originalFileName = file.name || 'Google Document';
+    } else {
+      throw new Error('このファイルタイプはドキュメント編集に対応していません');
+    }
+    
+    if (!docId) {
+      throw new Error('ドキュメントの処理に失敗しました');
+    }
+    
+    // ドキュメントの内容を取得
+    const doc = DocumentApp.openById(docId);
+    const body = doc.getBody();
+    const originalText = body.getText();
+    
+    // ドキュメント名を設定
+    const timestamp = Utilities.formatDate(new Date(), 'JST', 'yyyy-MM-dd_HH:mm');
+    doc.setName(`【修正版】${originalFileName}_${timestamp}`);
+    
+    // AIに修正案を依頼
+    const suggestions = getAISuggestions(originalText, userMessage);
+    
+    // 修正案をドキュメントに適用
+    applyAISuggestionsToDocument(doc, suggestions);
+    
+    // ドキュメントに編集履歴のヘッダーを追加
+    addReviewHeader(doc, originalFileName, userMessage);
+    
+    // 共有設定（元のドキュメントと同じ設定をコピー）
+    const originalDocId = file.url_private && file.url_private.includes('docs.google.com') 
+      ? extractDocIdFromUrl(file.url_private) 
+      : null;
+    setDocumentSharing(docId, originalDocId);
+    
+    // ドキュメントのURLを取得
+    const docUrl = doc.getUrl();
+    
+    return {
+      success: true,
+      url: docUrl,
+      docId: docId,
+      fileName: doc.getName(),
+      originalFileName: originalFileName,
+      suggestionsCount: suggestions.length
+    };
+    
+  } catch (error) {
+    Logger.log('ドキュメント処理エラー: ' + error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * WordファイルをGoogle Documentに変換
+ */
+function convertWordToGoogleDoc(file) {
+  const config = Settings();
+  if (!config?.SLACK_TOKEN) throw new Error('Slack Tokenが設定されていません');
+  
+  // Slackからファイルをダウンロード
+  const downloadUrl = file.url_private_download || file.url_private;
+  const options = {
+    method: 'get',
+    headers: {
+      'Authorization': 'Bearer ' + config.SLACK_TOKEN
+    },
+    muteHttpExceptions: true
+  };
+  
+  const response = UrlFetchApp.fetch(downloadUrl, options);
+  const blob = response.getBlob();
+  
+  // Google Documentに変換
+  const resource = {
+    title: file.name.replace(/\.(docx?|doc)$/i, ''),
+    mimeType: MimeType.GOOGLE_DOCS
+  };
+  
+  const convertedFile = Drive.Files.insert(resource, blob);
+  
+  return {
+    docId: convertedFile.id,
+    fileName: convertedFile.title
+  };
+}
+
+/**
+ * Google DocumentのURLからドキュメントIDを抽出
+ */
+function extractDocIdFromUrl(url) {
+  const patterns = [
+    /\/document\/d\/([a-zA-Z0-9-_]+)/,
+    /id=([a-zA-Z0-9-_]+)/,
+    /\/([a-zA-Z0-9-_]+)\/edit/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  throw new Error('Google DocumentのIDを抽出できませんでした');
+}
+
+/**
+ * Google Documentをコピー
+ */
+function copyGoogleDoc(originalDocId) {
+  try {
+    const originalDoc = DriveApp.getFileById(originalDocId);
+    const copy = originalDoc.makeCopy();
+    return copy.getId();
+  } catch (error) {
+    throw new Error('ドキュメントのコピーに失敗しました: ' + error.toString());
+  }
+}
+
+/**
+ * AIから修正案を取得
+ */
+function getAISuggestions(documentText, userRequest) {
+  const config = Settings();
+  
+  // プロンプトを構築
+  const systemPrompt = `あなたは優秀な文書校正者です。以下の文書を読んで、ユーザーのリクエストに基づいて修正案を提供してください。
+修正案は以下のJSON形式で返してください：
+[
+  {
+    "type": "correction" | "comment" | "addition",
+    "originalText": "修正対象の元のテキスト（最大50文字）",
+    "suggestion": "修正案または追加するテキスト",
+    "comment": "修正理由やコメント",
+    "position": "before" | "after" | "replace"
+  }
+]
+
+重要な注意事項：
+- originalTextは必ず元の文書に存在する一意のテキストを指定してください
+- 同じテキストが複数ある場合は、より長い文脈を含めて一意になるようにしてください
+- commentには修正の理由を簡潔に記載してください
+- 修正案は具体的で実装可能なものにしてください`;
+
+  const userPrompt = `以下の文書を確認して、「${userRequest || '全般的な改善提案をお願いします'}」という観点で修正案を提供してください。
+
+文書内容：
+${documentText}`;
+
+  let suggestions = [];
+  
+  if (config?.OPEN_AI_TOKEN) {
+    const response = chatGPTResponse(userPrompt, {
+      optionRole: [{ role: 'system', content: systemPrompt }]
+    });
+    
+    try {
+      // レスポンスからJSON部分を抽出
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        suggestions = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      Logger.log('JSON解析エラー: ' + e.toString());
+      // フォールバック: 基本的な修正案を作成
+      suggestions = [{
+        type: 'comment',
+        originalText: documentText.substring(0, 50),
+        suggestion: '',
+        comment: 'AIによる詳細な分析が必要です: ' + response.substring(0, 200),
+        position: 'after'
+      }];
+    }
+  }
+  
+  return suggestions;
+}
+
+/**
+ * AIの修正案をドキュメントに適用
+ */
+function applyAISuggestionsToDocument(doc, suggestions) {
+  const body = doc.getBody();
+  
+  // 修正案を適用（逆順で処理して位置ずれを防ぐ）
+  suggestions.reverse().forEach(suggestion => {
+    try {
+      const searchResult = body.findText(suggestion.originalText);
+      
+      if (searchResult) {
+        const element = searchResult.getElement();
+        const text = element.asText();
+        const startOffset = searchResult.getStartOffset();
+        const endOffset = searchResult.getEndOffsetInclusive();
+        
+        // 修正タイプに応じて処理
+        switch (suggestion.type) {
+          case 'correction':
+            // 取り消し線を追加して修正案を併記
+            text.setStrikethrough(startOffset, endOffset, true);
+            text.setForegroundColor(startOffset, endOffset, '#FF0000');
+            
+            // 修正案を追加
+            const correctionText = ` [修正案: ${suggestion.suggestion}]`;
+            text.insertText(endOffset + 1, correctionText);
+            text.setForegroundColor(endOffset + 1, endOffset + correctionText.length, '#0000FF');
+            text.setBold(endOffset + 1, endOffset + correctionText.length, true);
+            
+            // コメントを追加
+            if (suggestion.comment) {
+              const commentText = ` (理由: ${suggestion.comment})`;
+              text.insertText(endOffset + correctionText.length + 1, commentText);
+              text.setForegroundColor(endOffset + correctionText.length + 1, 
+                                     endOffset + correctionText.length + commentText.length, '#666666');
+              text.setItalic(endOffset + correctionText.length + 1, 
+                            endOffset + correctionText.length + commentText.length, true);
+            }
+            break;
+            
+          case 'comment':
+            // コメントを黄色ハイライトで追加
+            text.setBackgroundColor(startOffset, endOffset, '#FFFF00');
+            const commentOnlyText = ` [コメント: ${suggestion.comment}]`;
+            text.insertText(endOffset + 1, commentOnlyText);
+            text.setForegroundColor(endOffset + 1, endOffset + commentOnlyText.length, '#008000');
+            text.setItalic(endOffset + 1, endOffset + commentOnlyText.length, true);
+            break;
+            
+          case 'addition':
+            // 追加提案を緑色で表示
+            const additionText = ` [追加提案: ${suggestion.suggestion}]`;
+            text.insertText(endOffset + 1, additionText);
+            text.setForegroundColor(endOffset + 1, endOffset + additionText.length, '#008000');
+            text.setBold(endOffset + 1, endOffset + additionText.length, true);
+            text.setBackgroundColor(endOffset + 1, endOffset + additionText.length, '#E8F5E9');
+            break;
+        }
+      } else {
+        Logger.log(`テキストが見つかりません: ${suggestion.originalText}`);
+      }
+    } catch (e) {
+      Logger.log(`修正案の適用エラー: ${e.toString()}`);
+    }
+  });
+}
+
+/**
+ * ドキュメントにレビューヘッダーを追加
+ */
+function addReviewHeader(doc, originalFileName, userRequest) {
+  const body = doc.getBody();
+  const timestamp = Utilities.formatDate(new Date(), 'JST', 'yyyy/MM/dd HH:mm:ss');
+  
+  // ヘッダーセクションを作成
+  const headerParagraph = body.insertParagraph(0, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  headerParagraph.setHeading(DocumentApp.ParagraphHeading.NORMAL);
+  
+  const titleParagraph = body.insertParagraph(1, '📝 AI文書レビュー結果');
+  titleParagraph.setHeading(DocumentApp.ParagraphHeading.HEADING1);
+  titleParagraph.setBold(true);
+  
+  body.insertParagraph(2, `元ファイル: ${originalFileName}`);
+  body.insertParagraph(3, `レビュー日時: ${timestamp}`);
+  body.insertParagraph(4, `レビュー要求: ${userRequest || '全般的な改善'}`);
+  
+  const legendParagraph = body.insertParagraph(5, '\n凡例:');
+  legendParagraph.setBold(true);
+  
+  body.insertParagraph(6, '• 赤字取り消し線: 修正が必要な箇所');
+  body.insertParagraph(7, '• 青字: 修正案');
+  body.insertParagraph(8, '• 黄色ハイライト: コメント箇所');
+  body.insertParagraph(9, '• 緑字: 追加提案');
+  
+  body.insertParagraph(10, '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+}
+
+/**
+ * ドキュメントの共有設定（元のドキュメントと同じ設定をコピー）
+ */
+function setDocumentSharing(docId, originalDocId) {
+  try {
+    const file = DriveApp.getFileById(docId);
+    
+    // 元のドキュメントが存在する場合は、その共有設定をコピー
+    if (originalDocId) {
+      try {
+        const originalFile = DriveApp.getFileById(originalDocId);
+        
+        // 元のファイルの共有設定を取得
+        const originalAccess = originalFile.getSharingAccess();
+        const originalPermission = originalFile.getSharingPermission();
+        
+        // 同じ共有設定を適用
+        file.setSharing(originalAccess, originalPermission);
+        
+        // 元のファイルのエディターをコピー
+        const editors = originalFile.getEditors();
+        editors.forEach(editor => {
+          try {
+            file.addEditor(editor.getEmail());
+          } catch (e) {
+            Logger.log(`エディター追加エラー: ${editor.getEmail()}`);
+          }
+        });
+        
+        // 元のファイルのビューアーをコピー
+        const viewers = originalFile.getViewers();
+        viewers.forEach(viewer => {
+          try {
+            file.addViewer(viewer.getEmail());
+          } catch (e) {
+            Logger.log(`ビューアー追加エラー: ${viewer.getEmail()}`);
+          }
+        });
+        
+        Logger.log(`元のドキュメントの共有設定をコピーしました: ${docId}`);
+      } catch (e) {
+        Logger.log('元のドキュメントの共有設定取得エラー: ' + e.toString());
+        // フォールバック: デフォルトの共有設定を適用
+        setDefaultSharing(file);
+      }
+    } else {
+      // 元のドキュメントがない場合（Wordファイルの場合など）はデフォルト設定
+      setDefaultSharing(file);
+    }
+    
+  } catch (error) {
+    Logger.log('共有設定エラー: ' + error.toString());
+    throw new Error('ドキュメントの共有設定に失敗しました');
+  }
+}
+
+/**
+ * デフォルトの共有設定を適用
+ */
+function setDefaultSharing(file) {
+  // デフォルト: 組織内のユーザーがリンクで編集可能
+  try {
+    // まず組織内での共有を試みる
+    file.setSharing(DriveApp.Access.DOMAIN_WITH_LINK, DriveApp.Permission.EDIT);
+    Logger.log('組織内共有設定を適用しました');
+  } catch (e) {
+    // 組織設定が使えない場合は、リンクを知っている人が編集可能に
+    try {
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
+      Logger.log('リンク共有設定を適用しました');
+    } catch (e2) {
+      Logger.log('共有設定の適用に失敗しました: ' + e2.toString());
+    }
+  }
+}
+
+/**
+ * Slackメッセージ用のフォーマット
+ */
+function formatDocumentReviewResult(result) {
+  if (!result.success) {
+    return `❌ ドキュメントの処理中にエラーが発生しました:\n${result.error}`;
+  }
+  
+  const message = `✅ **ドキュメントレビューが完了しました！**
+
+📄 **元ファイル:** ${result.originalFileName}
+📝 **修正版ファイル:** ${result.fileName}
+💡 **修正提案数:** ${result.suggestionsCount}件
+
+🔗 **編集可能なリンク:**
+${result.url}
+
+💬 このリンクから直接ドキュメントを編集できます。
+   元のドキュメントと同じ共有設定が適用されています。
+
+📌 修正案の見方:
+• 赤字取り消し線: 修正が必要な箇所
+• 青字: 修正案
+• 黄色ハイライト: コメント箇所
+• 緑字: 追加提案`;
+  
+  return message;
+}
+
+// ===========================
+// AI レスポンス機能
+// ===========================
+
+/**
+ * OpenAI Chat Completion 呼び出し
+ */
+function chatGPTResponse(message, { optionRole = [], temperature }) {
+  const config = Settings();
+  if (!config?.OPEN_AI_TOKEN) return '';
+  const apiKey = config.OPEN_AI_TOKEN;
+  const url = 'https://api.openai.com/v1/chat/completions';
+  const payload = {
+    model: 'gpt-4',
+    messages: [...optionRole, { role: 'user', content: message }],
+    temperature: temperature ?? 1,
+  };
+  const options = {
+    method: 'post',
+    muteHttpExceptions: true,
+    headers: {
+      Authorization: 'Bearer ' + apiKey,
+      'Content-Type': 'application/json',
+    },
+    payload: JSON.stringify(payload),
+  };
+  const res = UrlFetchApp.fetch(url, options);
+  const result = JSON.parse(res.getContentText());
+  return result?.choices?.[0]?.message?.content || '';
+}
+
+/**
+ * Gemini API レスポンス (実装が必要な場合は追加)
+ */
+function geminiResponse(text, optionRole) {
+  // Gemini API の実装をここに追加
+  // 現在のコードには実装がないため、空の関数として定義
+  return '';
+}
+
+// ===========================
+// イベントハンドラ
+// ===========================
+
+/**
+ * スプレッドシート編集時のトリガー
+ */
+function onEditTrigger(e) {
+  //SheetLog.log("onEditTrigger");
+  var sheet = e.source.getActiveSheet();
+  var range = e.range;
+  if(sheet.getName() === 'faq'){
+    //SheetLog.log("onEditTrigger: row="+range.getRow()+" col="+range.getColumn());
+    // チェックボックスC列
+    if (range.getColumn() === 3){
+      if(range.getValue() === true && sheet.getRange(range.getRow(),1)) {
+        var keyword = sheet.getRange(range.getRow(), 1).getValue(); // キーワード取得
+        var result = searchDriveLink(keyword,sheet.getRange(range.getRow(), 4));
+        //SheetLog.log("onEditTrigger:"+JSON.stringify(result));
+        range.setValue(false);
+      }
+    }
+  }
+}
+
+// ===========================
+// メインエントリポイント
+// ===========================
+
+/**
+ * メインエントリポイント
+ */
+function doPost(e) {
+  const params = JSON.parse(e.postData.contents);
+
+  // 重複受信防止（3秒超過リトライ対策）
+  const cache = CacheService.getScriptCache();
+  if (
+    params.hasOwnProperty('event') &&
+    params.event.hasOwnProperty('client_msg_id')
+  ) {
+    if (cache.get(params.event.client_msg_id) === 'done') {
+      return ContentService.createTextOutput();
+    } else {
+      cache.put(params.event.client_msg_id, 'done', 600);
+    }
+  }
+
+  const Bot = new SlackBot(e);
+
+  // メンションイベント用ハンドラ
+  const run = ({ event, message, channel, threadTs }) => {
+    // ファイルが添付されている場合の処理
+    let fileContext = null;
+    let documentReviewResult = null;
+    
+    // ドキュメントレビューのキーワードをチェック
+    const isDocumentReview = message && (
+      message.includes('修正') || 
+      message.includes('レビュー') || 
+      message.includes('校正') ||
+      message.includes('チェック') ||
+      message.includes('改善') ||
+      message.includes('コメント')
+    );
+    
+    if (event.files && event.files.length > 0) {
+      const file = event.files[0]; // 最初のファイルを処理
+      
+      // Word/Googleドキュメントの場合でレビューが要求されている場合
+      if (isDocumentReview && (
+        file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        file.mimetype === 'application/msword' ||
+        (file.url_private && file.url_private.includes('docs.google.com'))
+      )) {
+        // ドキュメントレビューモードで処理
+        documentReviewResult = processDocumentForReview(file, message, channel);
+        
+        if (documentReviewResult && documentReviewResult.success) {
+          // レビュー結果をSlackに送信
+          const reviewMessage = formatDocumentReviewResult(documentReviewResult);
+          postMessage(reviewMessage, channel, threadTs || event.ts);
+          return; // ここで処理終了
+        }
+      } else {
+        // 通常のファイル読み取り処理
+        fileContext = handleMessageWithFiles(event);
+      }
+    }
+    
+    // チャンネル説明を取得
+    const channelInfo = getChannelInfo(channel);
+    const channelDescription =
+      channelInfo?.purpose?.value ||
+      'チャンネル説明がありません。以下の標準プロンプトを使用します。';
+
+    // ベースロール定義
+    const baseRole = [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      {
+        role: 'system',
+        content:
+          "When asked about the latest, be sure to give the Perplexity search URL link of 'https://www.perplexity.ai/?q='",
+      },
+      {
+        role: 'system',
+        content: 'When creating graphs, diagrams, or charts, use Mermaid syntax wrapped in ```mermaid code blocks. Slack will automatically render these as visual diagrams. Example formats: flowchart, sequence diagram, gantt chart, pie chart, etc.'
+      },
+      {
+        role: 'system',
+        content:
+          'If you have any questions, please ask clearly. Also, never answer by guessing.',
+      },
+      { role: 'system', content: 'Please answer as concisely as possible.' },
+      {
+        role: 'system',
+        content:
+          'If you have a reference source, please list the URL in list form at the end.',
+      },
+    ];
+
+    // メンション部分を除去して本文を取得
+    let text = message;
+    const mentionStart = text.indexOf('<@');
+    const mentionEnd = text.indexOf('>');
+    if (mentionStart === 0 && mentionEnd !== -1) {
+      text = text.substring(mentionEnd + 1).trim();
+    }
+
+    // 簡易コマンド対応
+    if (text === 'Hello') {
+      postMessage('Hi there!', channel, event.ts);
+      return;
+    } else if (text === 'help') {
+      postMessage(
+        'このボットはSlackでChatGPTに質問を投げられるボットです！',
+        channel,
+        event.ts
+      );
+      return;
+    }
+
+    // system プロンプトを追加
+    const optionRole = [...baseRole];
+    optionRole.push(
+      {
+        role: 'system',
+        content: 'Please explain the response results in Japanese.',
+      },
+      {
+        role: 'system',
+        content:
+          '今から説明するslackチャンネルとしてふさわしい回答を望む。付与する情報を前提として回答してください。FAQのスプレッドシートでの処理が可能な場合にはそのFAQの内容を踏まえて回答しつつ、スプレッドシートのリンク(https://docs.google.com/spreadsheets/d/1MKMjUp2F3r71-VCsT4wVfZo1G6IjEpxobQ7fJKtRPlA/edit?usp=sharing)を掲載して。もしもFAQのシートを参照する必要がなければ、FAQのシートには言及しないで。またFAQのスプレッドシートや参考情報のURLはなるべく自然な形で伝えるようにして。' +
+          channelDescription,
+      }
+    );
+
+    // FAQから追加ロールを取得
+    const faq = getFaqRole(text);
+    if (faq) optionRole.push(faq);
+
+    // ファイルコンテキストがある場合は追加
+    if (fileContext) {
+      optionRole.push({
+        role: 'system',
+        content: `ユーザーが添付したファイルの内容:\n${fileContext.fileContents}\n\nこの内容を考慮して回答してください。`
+      });
+      // ユーザーメッセージにファイル情報を追加
+      text = `${text || ''}\n\n[添付ファイル: ${fileContext.fileInfo.map(f => f.name).join(', ')}]`;
+    }
+
+    // スレッド履歴をマージ
+    const threadMessages = event.thread_ts
+      ? getThreadMessages(channel, event.thread_ts)
+      : [];
+    mergeRoleAndThread(optionRole, threadMessages);
+
+    // AI レスポンス取得
+    let responseText = '';
+    if (Settings().GEMINI_TOKEN) {
+      responseText = geminiResponse(text, optionRole);
+    } else {
+      responseText = chatGPTResponse(text, { optionRole });
+    }
+
+    // スレッドIDを決定（既存スレッド or 新規スレッドを起こす）
+    const replyThread = threadTs || event.ts;
+
+    // メッセージ送信（スレッド内）
+    postMessage(responseText, channel, replyThread);
+  };
+
+  // メンションされたときのみ処理
+  Bot.handleMentionEventBase(run);
+
+  return Bot.response();
+}
+
+// ===========================
+// 設定方法の説明
+// ===========================
+
+/**
+ * Slack Bot作成
+ * https://api.slack.com/apps
+ * 
+ * Botの作成手順
+ * https://blog.da-vinci-studio.com/entry/2022/09/13/101530
+ * 
+ * Bot更新時に必要な処理（デプロイ更新）
+ * https://ryjkmr.com/gas-web-app-deploy-new-same-url/
+ * 
+ * 利用開始までの流れ
+ * 1. SlackにBotを設定したいチャンネルを作成しchannel_idをコピー
+ * 2. channel_idをコードに貼り付け
+ * 3. OpenAI API Keyを発行しプロジェクト設定のスクリプトプロパティに入力
+ * 4. GASのデプロイでウェブアプリを作成し、自分で実行、全員が利用可能で共有し発行されたウェブアプリURLをコピー
+ * 5. SlackAppを以下のManifestにウェブアプリURLを貼り付けしSlackBotを作成
+ * 6. SlackAppのOAuthのBot Tokenをコピー
+ * 7. Bot Tokenをプロジェクト設定のスクリプトプロパティに入力
+ * 8. 作成したBotをSlackにインストール
+ * 9. チャンネルにBotを追加
+ * 10. Botの動作確認を行う
+ * 
+ * 必要なAPIの有効化:
+ * - Drive API (v2) - GASエディタで「サービス」→「+」から追加
+ * 
+ * Slack Manifest (JSON形式):
+ */
+
+const SLACK_MANIFEST_JSON = {
+  "display_information": {
+    "name": "ChatGPT",
+    "description": "AI Assistant Bot with Document Review",
+    "background_color": "#2eb886"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "ChatGPT",
+      "always_online": false
+    }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "chat:write.public",
+        "files:read",
+        "files:write",
+        "groups:read",
+        "reactions:read",
+        "remote_files:read",
+        "remote_files:share",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "{GAS_WEB_APP_URL}",  // ここにGASのウェブアプリURLを設定
+      "bot_events": [
+        "message.channels",
+        "app_mention",
+        "file_shared",
+        "file_change",
+        "file_deleted"
+      ]
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+};
+
+/**
+ * Slack Manifestを取得する関数
+ * @param {string} webAppUrl - GASのウェブアプリURL
+ * @returns {object} Slack Manifest JSON
+ */
+function getSlackManifest(webAppUrl) {
+  const manifest = JSON.parse(JSON.stringify(SLACK_MANIFEST_JSON));
+  manifest.settings.event_subscriptions.request_url = webAppUrl;
+  return manifest;
+}
+
+/**
+ * Slack ManifestをYAML形式で出力する関数
+ * SlackアプリのManifest EditorにYAML形式で貼り付ける場合に使用
+ */
+function getSlackManifestYAML(webAppUrl) {
+  const yaml = `display_information:
+  name: ChatGPT
+  description: AI Assistant Bot with Document Review
+  background_color: "#2eb886"
+features:
+  bot_user:
+    display_name: ChatGPT
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:read
+      - chat:write
+      - chat:write.public
+      - files:read
+      - files:write
+      - groups:read
+      - reactions:read
+      - remote_files:read
+      - remote_files:share
+      - users:read
+settings:
+  event_subscriptions:
+    request_url: ${webAppUrl}
+    bot_events:
+      - message.channels
+      - app_mention
+      - file_shared
+      - file_change
+      - file_deleted
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false`;
+  
+  return yaml;
+}
+
+/**
+ * 必要なスクリプトプロパティ:
+ * - SLACK_TOKEN: Slack Bot Token
+ * - OPEN_AI_TOKEN: OpenAI API Key
+ * - GEMINI_TOKEN: Gemini API Key (オプション)
+ * - GOOGLE_NL_API: Google Natural Language API Key
+ */
