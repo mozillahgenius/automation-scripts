@@ -2,6 +2,8 @@
 
 業務自動化スクリプト集 — Google Apps Script / JavaScript / TypeScript を中心とした50以上の自動化プロジェクト
 
+> **Note:** gas-shared-drive リポジトリから統合されたプロジェクトを含みます。
+
 ## カテゴリ一覧
 
 ### Slack連携 (`slack-integrations/`)
@@ -13,6 +15,7 @@
 | [slack-channel-creator](slack-integrations/slack-channel-creator/) | スプレッドシートからSlackチャンネル自動作成 | GAS, Slack API |
 | [slack-agenda-generator](slack-integrations/slack-agenda-generator/) | Slackメッセージから議題候補抽出・議事録案生成 | GAS, Slack API, OpenAI |
 | [slack-drive-naming-audit](slack-integrations/slack-drive-naming-audit/) | Slack/Google Drive命名ルール監査 | GAS, Slack API, Drive API |
+| [slackbot-faq](slack-integrations/slackbot-faq/) | キーワードマッチ型FAQ Bot（最小構成） | GAS, Slack API |
 
 ### Google Workspace自動化 (`google-workspace/`)
 
@@ -28,6 +31,8 @@
 | [bulk-document-generator](google-workspace/bulk-document-generator/) | テンプレートDocsから文書一括生成 | GAS, Docs API |
 | [offboarding-automation](google-workspace/offboarding-automation/) | 退職手続自動化（メール・SSO・デバイス管理） | GAS, Admin SDK, Gmail API |
 | [form-notifications](google-workspace/form-notifications/) | Googleフォーム送信通知 | GAS, Forms API, Gmail API |
+| [drive-upload-monitor](google-workspace/drive-upload-monitor/) | 共有Drive新規ファイル監視＋Slack通知 | GAS, Drive API, Slack Webhook |
+| [drive-governance](google-workspace/drive-governance/) | エンタープライズDriveガバナンス（命名規則・重複検出・権限管理） | GAS, Drive API |
 
 ### AI・ニュース自動化 (`ai-and-news/`)
 
@@ -57,6 +62,7 @@
 | [client-prospector](sales-and-marketing/client-prospector/) | 情シス・法務クライアント開拓 | GAS, Zapier, PR Times RSS |
 | [youtube-analyzer](sales-and-marketing/youtube-analyzer/) | YouTube動画分析・管理 | GAS, YouTube Data/Analytics API |
 | [email-newsletter](sales-and-marketing/email-newsletter/) | メルマガ配信 | GAS, Gmail |
+| [sns-reaction-analyzer](sales-and-marketing/sns-reaction-analyzer/) | SNS反響分析（YouTube/X/Googleトレンド＋AI） | GAS, Gemini, Grok, YouTube API |
 
 ### 業務オペレーション (`business-operations/`)
 
@@ -71,12 +77,16 @@
 | [business-flowchart](business-operations/business-flowchart/) | 業務フローチャート自動生成 | GAS, Sheets |
 | [automation-methodology](business-operations/automation-methodology/) | 業務自動化の方法論 | Documentation |
 | [warehouse-management](business-operations/warehouse-management/) | 倉庫管理システム設計 | System Design |
+| [license-management-en](business-operations/license-management-en/) | ライセンスコスト管理（英語版・動的列拡張） | GAS, Sheets |
+| [mail-reminder](business-operations/mail-reminder/) | 未処理メール管理＋優先度判定＋Slack通知 | GAS, Gmail, Slack Webhook |
+| [notion-activity-log](business-operations/notion-activity-log/) | Notionワークスペース変更監視・アクティビティ分析 | GAS, Notion API |
 
 ### セキュリティ (`security/`)
 
 | プロジェクト | 概要 | 技術 |
 |-------------|------|------|
 | [phishing-training](security/phishing-training/) | 標的型メール訓練 | GAS, Gmail, Perplexity |
+| [isms-risk-map](security/isms-risk-map/) | ISMSリスクアセスメント自動化（ヒートマップ・CIA分類） | GAS, Sheets |
 
 ### 個人プロジェクト (`personal/`)
 
