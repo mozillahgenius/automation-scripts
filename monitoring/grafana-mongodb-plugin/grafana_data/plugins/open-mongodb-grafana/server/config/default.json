@@ -1,0 +1,11 @@
+{
+    "server": 
+    {
+      "mongoUrl": "mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/",
+      "port": 3333,
+      "logRequests": false,
+      "logQueries": false,
+      "logTimings": false
+    }
+}
+  
