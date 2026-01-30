@@ -25,3 +25,9 @@ npm-debug.log*
 # Temp
 *.tmp
 *.bak
+
+# Claude
+.claude/
+
+# Backup files
+*.backup_*
